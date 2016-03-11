@@ -14,6 +14,9 @@
 #include "boolean.h"
 #include "tierUtils.h"
 
+#define SUCCESS 0
+#define ERROR 1
+
 char *fwdInterface = NULL;
 char *fwdTierAddr = NULL;
 int fwdSet = -1;
@@ -29,9 +32,11 @@ int packetForwardAlgorithm(char currentTier[], char desTier[]);
 boolean optimusForwardAlgorithm(char currentTier[], char desTier[]);
 boolean algorithmOptimusG(char currentTier[], char desTier[],
 		int tierValueCurrent);
-boolean algorithmG2(char currentTier[], char desTier[]);
-boolean algorithmG3(char currentTier[], char desTier[]);
-boolean algorithmG4(char currentTier[], char desTier[]);
+
+//Functions created for util later to be moved
+void getUID(char* curUID,char* currentTier);
+void formNextUIDtoTransferInCase3B(char* nextUID,char* curUID,boolean cond);
+boolean checkIfDestUIDSubStringUID(char* destUID,char* myUID);
 
 /**
  * packetForwardAlgorithm(char[],char[])
@@ -43,592 +48,442 @@ boolean algorithmG4(char currentTier[], char desTier[]);
  *
  * @return returnValue   (int) - algorithm return value (-1/0/1)
  */
-
-int packetForwardAlgorithm(char currentTier[], char desTier[]) {
+int packetForwardAlgorithm(char myTierAdd[], char desTierAdd[]) {
 
 	//printf("Entering packetForwardAlgorithm \n");
 
-	int returnValue = -1;
+	int returnValue = ERROR;
 	boolean checkOFA = false;
-    
-	if ((strlen(currentTier) == strlen(desTier))
-			&& ((strncmp(currentTier, desTier, strlen(currentTier)) == 0))) {
 
-		// Case: A
 
-		//printf("Case: A \n");
-		boolean checkFWDSet =setByTierManually(desTier,true);
+	if ((strlen(myTierAdd) == strlen(desTierAdd))
+			&& ((strncmp(myTierAdd, desTierAdd, strlen(desTierAdd)) == 0)))
+    {
 
-		if (checkFWDSet == true) {
+		// Case:1 Current Tier  = Destination Tier
+		printf("Case:1 My Tier [%s] = Destination Tier [%s] \n",myTierAdd,desTierAdd);
+		boolean checkIfFWDSet =setByTierManually(desTierAdd,true);
 
-			checkOFA = true;
-			fwdSet = 0;
-			returnValue = 0;
-
-		} else {
-
-			//printf("ERROR: Failed to set FWD Tier Address (Case: A)\n");
-			fwdSet = 1;
-			returnValue = 1;
+		if (checkIfFWDSet == true)
+        {
+			checkOFA = true;  //to-do need of this variable ?
+			fwdSet = SUCCESS; //to-do need of this variable ?
+			returnValue = SUCCESS;
+        }
+		else
+        {
+            printf("Case:1:ERROR: Failed to set FWD Tier Address\n");
+			fwdSet = ERROR;
+			returnValue = ERROR;
 		}
+	}
+	else
+    {
+        printf("Case:1 [NOT TRUE]  My Tier [%s] = Destination Tier [%s] \n",myTierAdd,desTierAdd);
+        // Check for Case 2 : if Destinaton label is in my neighbour table
+        if (containsTierAddress(desTierAdd) == true)
+        {
+            // Case2 : Destinaton label is in my neighbour table
+            printf("Case:2 Destinaton label is in my neighbour table \n");
 
-	} else {
+			//Forward Packet to the port curresponding  to the Destination label
 
-		if (containsTierAddress(desTier) == true) {
+			//to-do	//Doubt here how the port is found out here  , the code is same as in case 1
+			boolean checkFWDSet = setByTierOnly(desTierAdd, true);
 
-			// Case: B
-
-			//printf("Case: B \n");
-
-			//printf("TEST: containsTierAddress - return value - true \n");
-			boolean checkFWDSet = setByTierOnly(desTier, true);
-
-			if (checkFWDSet == true) {
-
-				checkOFA = true;
-				fwdSet = 0;
-				returnValue = 0;
-
-			} else {
-
-				//printf("ERROR: Failed to set FWD Tier Address (Case: B)\n");
-				fwdSet = 1;
-				returnValue = 1;
+            //Checking if the packet was able to successfully sent to the forward port.
+			if (checkFWDSet == true)
+            {
+                checkOFA = true;
+				fwdSet = SUCCESS;
+				returnValue = SUCCESS;
+			}
+            else
+            {
+                printf("Case2:ERROR: Failed to set FWD Tier Address\n");
+				fwdSet = ERROR;
+				returnValue = ERROR;
 			}
 
-		} else {
-
-			// Case: No A, No B
-
-			checkOFA = optimusForwardAlgorithm(currentTier, desTier);
 		}
+		else
+        {
 
+
+			//Goto case3
+			/*
+			Check 3:
+			Is  (My_TV ==  Dest_TV)  && TV == 1
+			Process 1: Full mesh topology
+              	Check my neighbor table
+              	Dest_Label is in my neighbor table
+				Forward the MPLR encapsulated packet to the port of access corresponding to the Dest_Label
+				Not in my neighbor table – goto Process 2
+				Process 2: Linear topology
+				              	Check My_UID, Dest_UID
+				If (My_UID < Dest_UID )
+				Send MNLR packet to TV.(My_UID + 1 )
+				Else  - Send MNLR packet to TV.( My_UID -1) }
+			*/
+
+			int myTierValue =  getTierVal(myTierAdd);
+			int destTierValue = getTierVal(desTierAdd);
+
+			printf("Case:2 [NOT TRUE]  My Tier [%s] = Destination Tier [%s] \n",myTierAdd,desTierAdd);
+			if(myTierValue == destTierValue)
+            {
+            	//checking for case 3
+            	if(myTierValue == 1)
+            	{
+	            	//Case:3 TRUE , Checking cases 3A and 3B
+	            	printf("Case:3 [TRUE] myTierValue == destTierValue && myTierValue == 1 \n");
+					if (containsTierAddress(desTierAdd) == true)
+	                {
+	                    //Case:3A True , same as case2
+	                    printf("Case:3A [TRUE] Destinaton label is in my neighbor table\n");
+	                    
+	                    //Forwarding the packet to the destination tier address port
+	                    boolean checkFWDSet = setByTierOnly(desTierAdd, true);
+
+	                    //Checking if the packet was successfully sent
+						if (checkFWDSet == true)
+	                    {
+	                       	checkOFA = true;
+							fwdSet = 0;
+							returnValue = 0;
+						}
+						else
+						{
+	                       printf("ERROR: Failed to set FWD Tier Address (Case: 2)\n");
+							fwdSet = 1;
+							returnValue = 1;
+						}
+
+					}
+					else
+	                {
+	                	printf("Case:3A [FALSE] Destinaton label is not in my neighbor table\n");
+	                	printf("Case:3B [TRUE] Destinaton label is not in my neighbor table\n");
+	                    	                    
+	                    //Goto case3B
+						char myUID[20];
+						char destUID[20];
+						char nextUID[20];
+						memset(nextUID,'\0',20);
+
+						//Foriming the UIDs from my tier address and destination tier address
+						getUID(myUID,myTierAdd);
+						getUID(destUID,desTierAdd);
+						boolean checkUIDComp = false;
+
+						//Comparing the UIDs of my  tier and destination tier , returns true my tier < destination tier
+						checkUIDComp = compareUIDs(myUID,destUID);
+
+						if(checkUIDComp)
+						{
+							//formNextUID(nextUID,curUID,true); //+1 case
+							formNextUIDtoTransferInCase3B(nextUID,myUID,true);
+						}
+						else
+						{
+							//formNextUID(nextUID,curUID,true); //-1 case
+							formNextUIDtoTransferInCase3B(nextUID,myUID,false);
+
+						}
+
+						//sendPacketTo Next UID
+						//to-do modify address with the UID .
+						boolean checkFWDSet = setByTierOnly(nextUID, true);
+						
+						if (checkFWDSet == true)
+						{
+							returnValue = true;
+						} 
+						else 
+						{
+							printf("ERROR: Failed to set FWD Tier Address\n");
+							returnValue = false;
+						}
+	                }
+	            }
+	            else
+	            {
+	            	//checking for case 4
+
+	            	printf("Case:4 [TRUE] \n");
+	            	char* parentTierAddress;
+	            	memset(parentTierAddress,'\0',20);
+
+	            	//trying to get the parent 
+	            	parentTierAddress = getParent(myTierAdd,'.');
+
+	            	//sending the packet from the current node to the parent node
+	            	boolean checkFWDSet = setByTierOnly(parentTierAddress, true);
+						
+					if (checkFWDSet == true)
+					{
+						returnValue = true;
+					} 
+					else 
+					{
+						printf("ERROR: Failed to set to the parent Tier Address\n");
+						returnValue = false;
+					}
+
+	            }
+            }
+            else
+            {
+            	//Case:5  My Tier Value !=  Destination Tier Value 
+            	printf("Case:5  [TRUE] My Tier Value !=  Destination Tier Value \n");
+
+            	int myTierValue = getTierVal(myTierAdd);
+            	int destTierValue = getTierVal(desTierAdd);
+
+            	/*      If Destination UID is a substring of My UID
+           				  	// Destination node is my parent/grandparent
+            				Forward packet to my parent with the longest substring match 
+        				Else
+        				{ 
+        				    
+        				}
+           		*/
+
+        		char destUID[20];
+				char myUID[20];
+
+				getUID(myUID,myTierAdd);
+				getUID(destUID,desTierAdd);
+
+            	//Case:5A
+            	if(myTierValue > destTierValue)
+            	{
+            		boolean check = checkIfDestUIDSubStringUID(destUID,myUID);
+
+            		if(check == true)
+            		{	
+            			//Forward packet to my parent with the longest substring match
+            		}
+            		else
+            		{
+            			//Print table
+
+						//Examine every neighbor table entry
+    				
+        				//If any Destination UID is a substring of a neighbor node UID
+        				    //Forward packet to the neighbor with the longest substring match
+        				//Else
+        				    //Forward packet to my parent
+            		}
+            	}
+            	else //Case:5B If( My Tier Value < Destination Tier Value)
+            	{
+            			//If My UID is a substring of Destination UID
+       					// 		Destination node is a child /grandchild
+            			//		Forward to my child with the longest substring match	
+       					//Else
+        				//	Examine every neighbor table entry
+            			//  If a neighbor node UID is a substring of the Destination UID
+                 		//		Forward packet to the matching neighbor
+             			//	Else
+                 		//		Forward packet to my parent
+				}	
+            }
+        }
+    }
+    return returnValue;
+}
+
+boolean checkIfDestUIDSubStringUID(char* destUID,char* myUID)
+{
+	return true;
+}
+
+
+/**
+ * formNextUIDtoTransferInCase3B
+ *
+ * Method that forms the next UID to transfer in case of 3B
+ *
+ * @return boolean
+ */
+
+void formNextUIDtoTransferInCase3B(char* nextUID,char* curUID,boolean cond){
+
+	int i = strlen(curUID)-1; 
+	int k = 0;
+	int savePos = 0;
+
+	while( (i >=0)  && (curUID[i-1] != '.') )
+	{
+			i--;
 	}
 
-	if (checkOFA == false) {
-		returnValue = 1;
-	} else {
-
-		returnValue = 0;
-		fwdSet = 0;
-
+	for(;i<strlen(curUID);i++)
+	{
+		nextUID[k] = curUID[i];
+		k++;
 	}
 
-	return returnValue;
+	i = strlen(nextUID)-1;
+	
+	while(nextUID[i-1] != '.'){
+		i--;
+	}
+
+	savePos = i;
+
+	k = 0;
+	char temp[20];
+	memset(temp,'\0',20);
+
+	while(i < strlen(nextUID))
+	{
+		temp[k] = nextUID[i];
+		k++;
+		i++;
+	}
+
+	int tempPart = atoi(temp);
+
+	//case 3B: +1 case , cond = true
+	if(cond) 
+	{
+		tempPart++;
+	}
+	else
+	{
+	//case 3B: -1 case , cond = true
+		tempPart--;
+	}
+
+	//temp = itoa(tempPart);
+
+	sprintf(temp, "%d", tempPart);
+
+	k = 0;
+	while(savePos < strlen(temp))
+	{
+		nextUID[savePos] = temp[k];
+		k++;
+		savePos++;
+	}
+	printf("%s : nextUID = %s",__FUNCTION__,nextUID);
+
+}
+
+
+/**
+ * compareUIDs(A,B)
+ *
+ * Method that compares two given UIDs (A and B) and returns true if A < B and False if A > B
+ *
+ * @return boolean
+ */
+
+boolean compareUIDs(char* curUID,char* destUID) {
+
+	//compare the UID's of both current NOde and the destination node
+	int ic =0;
+	int id = 0;
+	char curPart[20];
+	char destPart[20];
+	int k;
+
+	while( curUID[ic] != '\0' && destUID[id] != '\0' ){
+
+		k  =0;
+		while(curUID[ic]  != '\0' && curUID[ic] != '.'){
+			curPart[k++] = curUID[ic];
+			ic++;
+		}
+		curPart[k++] = '\0';
+
+		k  =0;
+		while(destUID[id] != '\0' && destUID[id] != '.'){
+			destPart[k++] = curUID[ic];
+			id++;
+		}
+		destPart[k++] = '\0';
+
+		int curPartVal = atoi(curPart);
+		int destPartVal = atoi(destPart);
+
+		if(curPartVal < destPartVal)
+			return true;
+		else if(curPartVal > destPartVal)
+			return false;
+		else{
+			//equal case
+			//continue
+			ic++;
+			id++;
+			memset(curPart,'\0',20);
+
+			memset(destPart,'\0',20);
+		}
+    }
+
+	if(destUID[id] != '\0' )
+		return false;
+
+	return true; //Should never come to this case as destID is always > curID length
+
 }
 
 /**
- * optimusForwardAlgorithm(char[],char[])
+ * getUID()
  *
- * method to perform optimal forwarding of a packet
+ * method to get the UID from the current Tier address and store it in curUID.
  *
- * @param currentTier (char[]) - current tier address
- * @param desTier     (char[]) - destination tier address
- *
- * @return returnVal (boolean) - return status
+ * @return none
  */
 
-boolean optimusForwardAlgorithm(char currentTier[], char desTier[]) {
+void getUID(char* curUID,char* currentTier){
 
-	//printf("Entering optimusForwardAlgorithm \n");
+	int i = 0;
+	////Truncate and store the truncated part as the Tier value the UID's of both the current and the destination
 
-	boolean returnVal = true;
-	boolean checkSubAlgoG = true;
-
-	int tierValueC = getTierValue(currentTier);
-	int tierValueD = getTierValue(desTier);
-
-	if (tierValueC == tierValueD) {
-
-		if (tierValueC == 1) {
-
-			checkSubAlgoG = algorithmOptimusG(currentTier, desTier, tierValueC);
-
-		} else {
-
-			// Case: C
-
-			//printf("Case: C \n");
-			char parentC[20];
-			memset(parentC, '\0', 20);
-			strcpy(parentC, currentTier);
-            
-            strcpy(parentC, getParent(parentC, '.'));
-
-			boolean checkFWDSet = setByTierOnly(parentC, true);
-
-			if (checkFWDSet == true) {
-
-				fwdSet = 0;
-				returnVal = true;
-
-			} else {
-
-				printf("ERROR: Failed to set FWD Tier Address (Case: C)\n");
-				fwdSet = 1;
-				returnVal = false;
-			}
-
-		}
-	} else {
-
-		if (tierValueC == 1) {
-
-			// Case: F, G, H
-			checkSubAlgoG = algorithmG2(currentTier, desTier);
-
-		} else {
-
-			if (tierValueC < tierValueD) {
-
-				// Case: I, J
-				checkSubAlgoG = algorithmG3(currentTier, desTier);
-
-			} else {
-
-				// Case: K, L
-				checkSubAlgoG = algorithmG4(currentTier, desTier);
-
-			}
-
-		}
+	while(currentTier[i] != '.'){
+		i++;
 
 	}
+	i = i+1;
 
-	if (checkSubAlgoG == false) {
+	int k = 0;
 
-		fwdSet = 1;
-		returnVal = false;
-
-	} else {
-
-		fwdSet = 0;
-		returnVal = true;
+	while(currentTier[i] != '\0'){
+			curUID[k] = currentTier[i];
+			i++;
+			k++;
 
 	}
-
-	return returnVal;
 }
 
 
-boolean algorithmOptimusG(char currentTier[], char desTier[],
-		int tierValueCurrent) {
+/**
+ * getTierVal()
+ *
+ * method to get the Tier value from the passed Tier address and return the same.
+ *
+ * @return int [ the tier it belongs to]
+ */
 
-	//printf("Entering Algorithm OptimusG \n");
-
-	boolean returnVal = false;
-
-	int uniqueChildC = getUniqueChildIndex(currentTier);
-	int uniqueChildD = getUniqueChildIndex(desTier);
-
-	if (uniqueChildC < uniqueChildD) {
-
-		// Case: D
-
-		//printf("Case: D \n");
-		uniqueChildC = uniqueChildC + 1;
-
-	} else {
-
-		// Case: E
-
-		//printf("Case: E \n");
-		uniqueChildC = uniqueChildC - 1;
-
+int getTierVal(char* tierAdd)
+{
+	int i = 0;
+	char tierValInString[20];
+	int tier = -1;
+	memset(tierValInString,'\0',20);
+	
+	while(tierAdd[i] != '.')
+	{
+		tierValInString[i] = tierAdd[i];
+		i++;
 	}
 
-	int tierValueCSize = floor(log10(abs(tierValueCurrent))) + 1;
-	char subStrTierC[tierValueCSize];
-	toString(subStrTierC, tierValueCurrent);
-
-	int uniqueChildCSize = floor(log10(abs(uniqueChildC))) + 1;
-	char subStrC[uniqueChildCSize];
-	toString(subStrC, uniqueChildC);
-
-	char trunkTier[20];
-	strcpy(trunkTier, subStrTierC);
-	strcat(trunkTier, ".");
-	strcat(trunkTier, subStrC);
-
-	boolean checkFWDSet = setByTierOnly(trunkTier, true);
-
-	if (checkFWDSet == true) {
-		returnVal = true;
-
-	} else {
-
-		printf("ERROR: Failed to set FWD Tier Address (Case: D-E)\n");
-		returnVal = false;
-	}
-
-	return returnVal;
-}
-
-
-boolean algorithmG2(char currentTier[], char desTier[]) {
-
-	//printf("Entering Algorithm G2 \n");
-
-	boolean returnVal = false;
-
-	//int tierCDot2 = -1;
-
-
-
-
-
-
-
-	char tierCByDot2[10];
-	memset(tierCByDot2, '\0', 10);
-	getStringByDot(currentTier, 2, tierCByDot2);
-	toInt(tierCByDot2, strlen(tierCByDot2));
-
-	char tierDByDot2[10];
-	memset(tierDByDot2, '\0', 10);
-	getStringByDot(desTier, 2, tierDByDot2);
-	toInt(tierDByDot2, strlen(tierDByDot2));
-
-	char masterTierAddr[20];
-	memset(masterTierAddr, '\0', 20);
-
-	if (tierCByDot2 == tierDByDot2) {
-
-		// Case: F
-
-		char tempMasterVal[10];
-		memset(tempMasterVal, '\0', 10);
-
-		toString(tempMasterVal, 2);
-		strcpy(masterTierAddr, tempMasterVal);
-
-		strcat(masterTierAddr, ".");
-
-		memset(tempMasterVal, '\0', 10);
-		getStringByDot(desTier, 1, tempMasterVal);
-
-		strcat(masterTierAddr, tempMasterVal);
-		strcat(masterTierAddr, ".");
-
-		memset(tempMasterVal, '\0', 10);
-		getStringByDot(desTier, 2, tempMasterVal);
-		strcat(masterTierAddr, tempMasterVal);
-		memset(tempMasterVal, '\0', 10);
-
-	} else {
-
-		char tempMasterVal[10];
-		memset(tempMasterVal, '\0', 10);
-
-		toString(tempMasterVal, 1);
-		strcpy(masterTierAddr, tempMasterVal);
-
-		strcat(masterTierAddr, ".");
-
-		memset(tempMasterVal, '\0', 10);
-		getStringByDot(desTier, 1, tempMasterVal);
-
-		int tempInt = toInt(tempMasterVal, strlen(tempMasterVal));
-
-		if (tierCByDot2 < tierDByDot2) {
-
-			// Case: G
-
-			tempInt = tempInt + 1;
-		} else {
-
-			// Case: H
-
-			tempInt = tempInt - 1;
-
-		}
-
-		memset(tempMasterVal, '\0', 10);
-		toString(tempMasterVal, tempInt);
-
-		strcat(masterTierAddr, tempMasterVal);
-		memset(tempMasterVal, '\0', 10);
-	}
-
-	boolean checkFWDSet = setByTierOnly(masterTierAddr, true);
-
-	if (checkFWDSet == true) {
-		returnVal = true;
-
-	} else {
-
-		printf("ERROR: Failed to set FWD Tier Address (Case: F-G-H)\n");
-		returnVal = false;
-	}
-
-	memset(masterTierAddr, '\0', 20);
-	return returnVal;
-
-}
-
-
-boolean algorithmG3(char currentTier[], char desTier[]) {
-
-	//printf("Entering Algorithm G3 \n");
-
-	boolean returnVal = false;
-	char masterTierAddr[20];
-	memset(masterTierAddr, '\0', 20);
-
-	// insert code below
-
-	char parentCExT[20];
-	memset(parentCExT, '\0', 20);
-	strcpy(parentCExT, currentTier);
-	int firstDotPosC = getFirstDotPosition(currentTier);
-	getParentExcludeT(parentCExT, '.', firstDotPosC + 1);
-
-	char parentDExT[20];
-	memset(parentDExT, '\0', 20);
-	strcpy(parentDExT, desTier);
-	int firstDotPosD = getFirstDotPosition(desTier);
-	getParentExcludeT(parentDExT, '.', firstDotPosD + 1);
-
-	int checkMatch = findOccurenceAt(parentDExT, parentCExT);
-
-	if (checkMatch == 0) {
-
-		// Case: I
-
-		int tierVal = getTierValue(currentTier);
-
-		char tempMasterVal[10];
-		memset(tempMasterVal, '\0', 10);
-
-		toString(tempMasterVal, tierVal + 1);
-		strcpy(masterTierAddr, tempMasterVal);
-		memset(tempMasterVal, '\0', 10);
-
-		int i = 0;
-		for (; i < tierVal + 1; i++) {
-
-			memset(tempMasterVal, '\0', 10);
-			strcat(masterTierAddr, ".");
-			getStringByDot(desTier, i + 1, tempMasterVal);
-			strcat(masterTierAddr, tempMasterVal);
-
-		}
-
-	} else {
-
-		// Case: J
-		// D1 is for tier C and D2 is for tier (C-1)
-
-		int tierVal = getTierValue(currentTier);
-
-		char tempMasterVal[10];
-		memset(tempMasterVal, '\0', 10);
-
-		char superParentOfD1[20];
-		memset(superParentOfD1, '\0', 20);
-		char superParentOfD2[20];
-		memset(superParentOfD2, '\0', 20);
-
-		toString(tempMasterVal, tierVal);
-		strcpy(superParentOfD1, tempMasterVal);
-		memset(tempMasterVal, '\0', 10);
-
-		toString(tempMasterVal, tierVal - 1);
-		strcpy(superParentOfD2, tempMasterVal);
-		memset(tempMasterVal, '\0', 10);
-
-		int i = 0;
-		for (; i < tierVal; i++) {
-
-			memset(tempMasterVal, '\0', 10);
-			strcat(superParentOfD1, ".");
-			getStringByDot(desTier, i + 1, tempMasterVal);
-			strcat(superParentOfD1, tempMasterVal);
-
-			if (i < tierVal - 1) {
-
-				memset(tempMasterVal, '\0', 10);
-				strcat(superParentOfD2, ".");
-				getStringByDot(desTier, i + 1, tempMasterVal);
-				strcat(superParentOfD2, tempMasterVal);
-			}
-
-		}
-
-		if (containsTierAddress(superParentOfD1) == true) {
-
-			// Case: J-1A
-
-			strcpy(masterTierAddr, superParentOfD1);
-
-		} else {
-
-			if (containsTierAddress(superParentOfD2) == true) {
-
-				// Case: J-1B
-
-				strcpy(masterTierAddr, superParentOfD2);
-
-			} else {
-
-				// Case: J-2
-
-				char parentOfC[20];
-				memset(parentOfC, '\0', 20);
-				strcpy(parentOfC, currentTier);
-
-				strcpy(parentOfC, getParent(parentOfC, '.'));
-				strcpy(masterTierAddr, parentOfC);
-
-				memset(parentOfC, '\0', 20);
-			}
-
-		}
-
-		memset(superParentOfD1, '\0', 20);
-		memset(superParentOfD2, '\0', 20);
-
-	}
-
-	// insert code above
-
-	boolean checkFWDSet = setByTierOnly(masterTierAddr, true);
-
-	if (checkFWDSet == true) {
-		returnVal = true;
-
-	} else {
-
-		printf("ERROR: Failed to set FWD Tier Address (Case: I-J)\n");
-		returnVal = false;
-	}
-
-	memset(masterTierAddr, '\0', 20);
-	return returnVal;
-
-}
-
-
-boolean algorithmG4(char currentTier[], char desTier[]) {
-
-	//printf("Entering Algorithm G4 \n");
-
-	boolean returnVal = false;
-
-	char masterTierAddr[20];
-	memset(masterTierAddr, '\0', 20);
-
-	// insert code below
-
-	boolean tryToSet = true;
-
-	char parentCExT[20];
-	memset(parentCExT, '\0', 20);
-	strcpy(parentCExT, currentTier);
-	int firstDotPosC = getFirstDotPosition(currentTier);
-	getParentExcludeT(parentCExT, '.', firstDotPosC + 1);
-
-	char parentDExT[20];
-	memset(parentDExT, '\0', 20);
-	strcpy(parentDExT, desTier);
-	int firstDotPosD = getFirstDotPosition(desTier);
-	getParentExcludeT(parentDExT, '.', firstDotPosD + 1);
-
-	int checkMatch = findOccurenceAt(parentCExT, parentDExT);
-
-	if (checkMatch == 0) {
-
-		// Case: K
-
-		char parentforC[20];
-		memset(parentforC, '\0', 20);
-		strcpy(parentforC, currentTier);
-
-		strcpy(parentforC, getParent(parentforC, '.'));
-		strcpy(masterTierAddr, parentforC);
-
-		memset(parentforC, '\0', 20);
-		tryToSet = true;
-
-	} else {
-
-		// Case: L
-		// D1 is for tier (D+1)
-
-		int tierVal = getTierValue(desTier);
-
-		char tempMasterVal[10];
-		memset(tempMasterVal, '\0', 10);
-
-		char superParentOfD1[20];
-		memset(superParentOfD1, '\0', 20);
-
-		toString(tempMasterVal, tierVal + 1);
-		strcpy(superParentOfD1, tempMasterVal);
-		memset(tempMasterVal, '\0', 10);
-
-		strcat(superParentOfD1, ".");
-
-		char parentDExcTU[20];
-		memset(parentDExcTU, '\0', 20);
-		strcpy(parentDExcTU, desTier);
-
-		int dFDot = getFirstDotPosition(desTier);
-		int dLDot = getLastDotPosition(desTier);
-
-		getParentExcludeTU(parentDExcTU, '.', dFDot + 1, dLDot - 1);
-		strcat(superParentOfD1, parentDExcTU);
-		strcat(superParentOfD1, ".");
-
-		boolean checkMatchOpt = setByTierPartial(superParentOfD1, true);
-
-		if (checkMatchOpt == true) {
-
-			// Case: L-1
-
-			strcpy(masterTierAddr, superParentOfD1);
-
-			memset(parentDExcTU, '\0', 20);
-			memset(superParentOfD1, '\0', 20);
-
-			returnVal = true;
-			tryToSet = false;
-
-		} else {
-
-			// Case: L-2 (Similar to Case: K)
-
-			char parentforC[20];
-			memset(parentforC, '\0', 20);
-			strcpy(parentforC, currentTier);
-
-			strcpy(parentforC, getParent(parentforC, '.'));
-			strcpy(masterTierAddr, parentforC);
-
-			memset(parentforC, '\0', 20);
-			tryToSet = true;
-		}
-
-	}
-
-	// insert code above
-
-	if (tryToSet == true) {
-		boolean checkFWDSet = setByTierOnly(masterTierAddr, true);
-
-		if (checkFWDSet == true) {
-			returnVal = true;
-
-		} else {
-
-			printf("ERROR: Failed to set FWD Tier Address (Case: K-L)\n");
-			returnVal = false;
-		}
-
-	}
-	memset(masterTierAddr, '\0', 20);
-	return returnVal;
-
+	tier = atoi(tierValInString);
+	return tier;
 }
 
 /**
@@ -642,3 +497,7 @@ int isFWDFieldsSet() {
 
 	return fwdSet;
 }
+
+
+
+

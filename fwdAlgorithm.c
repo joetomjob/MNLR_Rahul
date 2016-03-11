@@ -496,7 +496,7 @@ int getTierVal(char* tierAdd)
 int isFWDFieldsSet() {
 
 	return fwdSet;
-}
+ }
 
 
 

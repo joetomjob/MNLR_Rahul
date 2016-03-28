@@ -190,7 +190,7 @@ int packetForwardAlgorithm(char myTierAdd[], char desTierAdd[]) {
 							formNextUIDtoTransferInCase3B(nextTierAddress,myTierAdd,false);
 
 						}
-
+						printf("\n nextTierAddress = %s\n",nextTierAddress);
 						//sendPacketTo Next UID
 						//to-do modify address with the UID .
 						boolean checkFWDSet = setByTierOnly(nextTierAddress, true);
@@ -313,6 +313,9 @@ void formNextUIDtoTransferInCase3B(char* nextTierAddress ,char* currentTierAddre
 	int i = strlen(currentTierAddress)-1; 
 	int k = 0;
 	int savePos = 0;
+	
+	printf("\n formNextUIDtoTransferInCase3B : currentTierAddress = %s condition = %s \n",currentTierAddress,
+								(cond == true)?"true":"false");
 
 	//currentTierAddress = 1.1
 
@@ -382,7 +385,7 @@ void formNextUIDtoTransferInCase3B(char* nextTierAddress ,char* currentTierAddre
 		savePos++;
 	}
 	//nextTierAddress = 1.2
-	printf("%s : nextTierAddress = %s",__FUNCTION__,nextTierAddress);
+	printf("\n%s : nextTierAddress = %s Length=%d\n",__FUNCTION__,nextTierAddress,strlen(nextTierAddress));
 
 }
 
@@ -403,7 +406,7 @@ boolean compareUIDs(char* curUID,char* destUID) {
 	char curPart[20];
 	char destPart[20];
 	int k;
-
+	printf("\n%s : curUID =%s , destUID =%s",__FUNCTION__,curUID,destUID);
 	while( curUID[ic] != '\0' && destUID[id] != '\0' ){
 
 		k  =0;
@@ -415,18 +418,23 @@ boolean compareUIDs(char* curUID,char* destUID) {
 
 		k  =0;
 		while(destUID[id] != '\0' && destUID[id] != '.'){
-			destPart[k++] = curUID[ic];
+			destPart[k++] = destUID[id];
 			id++;
 		}
 		destPart[k++] = '\0';
 
 		int curPartVal = atoi(curPart);
 		int destPartVal = atoi(destPart);
+		printf("\n %s: comparing UIDS curPartVal=%d destPartVal=%d ",__FUNCTION__,curPartVal,destPartVal);
 
-		if(curPartVal < destPartVal)
+		if(curPartVal < destPartVal){
+			printf("\n%s : curPartVal < destPartVal",__FUNCTION__);
 			return true;
-		else if(curPartVal > destPartVal)
+		}
+		else if(curPartVal > destPartVal){
+			printf("\n%s : curPartVal < destPartVal",__FUNCTION__);
 			return false;
+		}
 		else{
 			//equal case
 			//continue
@@ -438,9 +446,12 @@ boolean compareUIDs(char* curUID,char* destUID) {
 		}
 	}
 
-	if(destUID[id] != '\0' )
-		return false;
-
+	if(destUID[id] != '\0' ){
+		printf("%s : destUID is still left",__FUNCTION__);
+		return false;	
+	}
+	
+	printf("%s: Some error!! ",__FUNCTION__);
 	return true; //Should never come to this case as destID is always > curID length
 
 }

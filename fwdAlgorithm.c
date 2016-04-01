@@ -50,7 +50,7 @@ boolean checkIfDestUIDSubStringUID(char* destUID,char* myUID);
  */
 int packetForwardAlgorithm(char myTierAdd[], char desTierAdd[]) {
 
-	//printf("Entering packetForwardAlgorithm \n");
+	printf("\n\nEntering packetForwardAlgorithm \n");
 
 	int returnValue = ERROR;
 	boolean checkOFA = false;
@@ -150,13 +150,13 @@ int packetForwardAlgorithm(char myTierAdd[], char desTierAdd[]) {
 						{
 							checkOFA = true;
 							fwdSet = 0;
-							returnValue = 0;
+							returnValue = SUCCESS;
 						}
 						else
 						{
 						   printf("ERROR: Failed to set FWD Tier Address (Case: 2)\n");
 							fwdSet = 1;
-							returnValue = 1;
+							returnValue = ERROR;
 						}
 
 					}
@@ -190,19 +190,23 @@ int packetForwardAlgorithm(char myTierAdd[], char desTierAdd[]) {
 							formNextUIDtoTransferInCase3B(nextTierAddress,myTierAdd,false);
 
 						}
-						printf("\n nextTierAddress = %s\n",nextTierAddress);
+						printf("\n forwarding to nextTierAddress = %s\n",nextTierAddress);
 						//sendPacketTo Next UID
 						//to-do modify address with the UID .
 						boolean checkFWDSet = setByTierOnly(nextTierAddress, true);
 						
 						if (checkFWDSet == true)
 						{
-							returnValue = true;
+							printf("\n packet forwrded to nextTierAddress = %s\n",nextTierAddress);
+							returnValue = SUCCESS;
+							fwdSet = SUCCESS; //to-do need of this variable ?
 						} 
 						else 
 						{
 							printf("ERROR: Failed to set FWD Tier Address\n");
-							returnValue = false;
+							returnValue = ERROR;
+							
+							fwdSet = ERROR; //to-do need of this variable ?
 						}
 					}
 				}
@@ -222,12 +226,12 @@ int packetForwardAlgorithm(char myTierAdd[], char desTierAdd[]) {
 						
 					if (checkFWDSet == true)
 					{
-						returnValue = true;
+						returnValue = SUCCESS;
 					} 
 					else 
 					{
 						printf("ERROR: Failed to set to the parent Tier Address\n");
-						returnValue = false;
+						returnValue = ERROR;
 					}
 
 				}
@@ -291,6 +295,7 @@ int packetForwardAlgorithm(char myTierAdd[], char desTierAdd[]) {
 			}
 		}
 	}
+	printf("\n\n\n\n%s:Exit , returnValue = %d",__FUNCTION__,returnValue);
 	return returnValue;
 }
 
@@ -385,7 +390,7 @@ void formNextUIDtoTransferInCase3B(char* nextTierAddress ,char* currentTierAddre
 		savePos++;
 	}
 	//nextTierAddress = 1.2
-	printf("\n%s : nextTierAddress = %s Length=%d\n",__FUNCTION__,nextTierAddress,strlen(nextTierAddress));
+	printf("\n%s : nextTierAddress = %s Length=%d\n",__FUNCTION__,nextTierAddress,(int)strlen(nextTierAddress));
 
 }
 

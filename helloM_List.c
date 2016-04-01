@@ -315,9 +315,9 @@ int _get_MACTest(struct addr_tuple *myAddr, int numTierAddr) {
 
 					ipReceivedCount++;
 
-					//printf("TEST: IP Packet Received \n");
+					printf("TEST: IP Packet Received \n");
 
-					//printf("\n");
+					printf("\n");
 
 					unsigned char *ipHeadWithPayload;
 					int ipPacketSize = nIP - 14;
@@ -333,50 +333,49 @@ int _get_MACTest(struct addr_tuple *myAddr, int numTierAddr) {
 					sprintf(ipDestTemp, "%u.%u.%u.%u", ipHeadWithPayload[16],
 							ipHeadWithPayload[17], ipHeadWithPayload[18],
 							ipHeadWithPayload[19]);
-					//printf("IP Destination : %s  \n", ipDestTemp);
+					printf("IP Destination : %s  \n", ipDestTemp);
 
-					//printf("Calling Forwarding Algorithm - DataSend\n");
+					printf("Calling Forwarding Algorithm - DataSend\n");
 
 					int packetFwdStatus = -1;
 
 					if (isTierSet() == 0) {
-
+						printf("%s: isTierSet() == 0",__FUNCTION__);
 						boolean checkDestStatus =
 								updateEndDestinationTierAddrHC(ipDestTemp);
 
 						if (checkDestStatus == false) {
 							errorCount++;
-							//printf(
-							//		"ERROR: End destination tier address not available \n");
+							printf("ERROR: End destination tier address not available \n");
 						}
 
 						packetFwdStatus = packetForwardAlgorithm(tierAddress,
 								tierDest);
 
 					} else {
-						//printf("ERROR: Tier info was not set \n");
+						printf("ERROR: Tier info was not set \n");
 
 						packetFwdStatus = packetForwardAlgorithm(tierAddress,
 								tierDest);
 
 					}
 
-					if (packetFwdStatus == 0) {
+					printf("%s: packetFwdStatus = %d \n",__FUNCTION__,packetFwdStatus);
 
+					if (packetFwdStatus == 0) {
+						printf("%s: packetFwdStatus == 0",__FUNCTION__);
 						if ((strlen(fwdTierAddr) == strlen(tierAddress))
 								&& (strcmp(fwdTierAddr, tierAddress) == 0)) {
 
-							//printf(
-							//		"TEST: Received IP packet -(it's for me only, no forwarding needed) \n");
+							printf("TEST: Received IP packet -(it's for me only, no forwarding needed) \n");
 
 						} else {
+							printf("TEST: Recieved IP packet is not for me \n");
 
 							if (isFWDFieldsSet() == 0) {
 
-								//printf(
-								//		"TEST: Forwarding IP Packet as MPLR Data Packet (Encapsulation) \n");
-								//printf("TEST: Sending on interface: %s \n",
-									//	fwdInterface);
+								printf("TEST: Forwarding IP Packet as MPLR Data Packet (Encapsulation) \n");
+								printf("TEST: Sending on interface: %s \n",fwdInterface);
 								dataSend(fwdInterface, ipHeadWithPayload,
 										tierDest, tierAddress, ipPacketSize);
 
@@ -392,9 +391,9 @@ int _get_MACTest(struct addr_tuple *myAddr, int numTierAddr) {
 			} else {
 				ipReceivedCount++;
 
-				//printf("TEST: IP Packet Received \n");
+				printf("TEST: IP Packet Received \n");
 
-				//printf("\n");
+				printf("\n");
 
 				unsigned char *ipHeadWithPayload;
 				int ipPacketSize = nIP - 14;
@@ -402,7 +401,7 @@ int _get_MACTest(struct addr_tuple *myAddr, int numTierAddr) {
 				memset(ipHeadWithPayload, '\0', ipPacketSize);
 				memcpy(ipHeadWithPayload, &bufferIP[14], ipPacketSize);
 
-				//printf("\n");
+				printf("\n");
 
 				setInterfaces();
 
@@ -410,9 +409,9 @@ int _get_MACTest(struct addr_tuple *myAddr, int numTierAddr) {
 				sprintf(ipDestTemp, "%u.%u.%u.%u", ipHeadWithPayload[16],
 						ipHeadWithPayload[17], ipHeadWithPayload[18],
 						ipHeadWithPayload[19]);
-				//printf("IP Destination : %s  \n", ipDestTemp);
+				printf("IP Destination : %s  \n", ipDestTemp);
 
-				//printf("Calling Forwarding Algorithm - DataSend\n");
+				printf("Calling Forwarding Algorithm - DataSend\n");
 
 				// TESTING FWD ALGORITHM 2 - Case: IP Packet Received, Control Interface not set
 
@@ -425,15 +424,14 @@ int _get_MACTest(struct addr_tuple *myAddr, int numTierAddr) {
 
 					if (checkDestStatus == false) {
 						errorCount++;
-						//printf(
-						//		"ERROR: End destination tier address not available \n");
+						printf("ERROR: End destination tier address not available \n");
 					}
 
 					packetFwdStatus = packetForwardAlgorithm(tierAddress,
 							tierDest);
 
 				} else {
-					//printf("ERROR: Tier info was not set\n");
+					printf("ERROR: Tier info was not set\n");
 
 					packetFwdStatus = packetForwardAlgorithm(tierAddress,
 							tierDest);
@@ -445,16 +443,14 @@ int _get_MACTest(struct addr_tuple *myAddr, int numTierAddr) {
 					if ((strlen(fwdTierAddr) == strlen(tierAddress))
 							&& (strcmp(fwdTierAddr, tierAddress) == 0)) {
 
-						//printf(
-					//			"TEST: Received IP packet -(it's for me only, no forwarding needed) \n");
+						printf("TEST: Received IP packet -(it's for me only, no forwarding needed) \n");
 
 					} else {
 
 						if (isFWDFieldsSet() == 0) {
 
-							//printf(
-						//			"TEST: Forwarding IP Packet as MPLR Data Packet (Encapsulation) \n");
-							//printf("Sending on interface: %s \n", fwdInterface);
+							printf("TEST: Forwarding IP Packet as MPLR Data Packet (Encapsulation) \n");
+							printf("Sending on interface: %s \n", fwdInterface);
 							dataSend(fwdInterface, ipHeadWithPayload, tierDest,
 									tierAddress, ipPacketSize);
 
@@ -489,36 +485,37 @@ int _get_MACTest(struct addr_tuple *myAddr, int numTierAddr) {
 
 			if (ethhead != NULL) {
 
-				//printf("\n--------------------------------------"
-				//		"\n   MAC Destination : "
-				//		"%02x:%02x:%02x:%02x:%02x:%02x\n", ethhead[0],
-				//		ethhead[1], ethhead[2], ethhead[3], ethhead[4],
-				//		ethhead[5]);
+				printf("\n--------------------------------------"
+					"\n   MAC Destination : "
+						"%02x:%02x:%02x:%02x:%02x:%02x\n", ethhead[0],
+						ethhead[1], ethhead[2], ethhead[3], ethhead[4],
+						ethhead[5]);
 
-				//printf("        MAC Origin : "
-				//		"%02x:%02x:%02x:%02x:%02x:%02x\n", ethhead[6],
-				//		ethhead[7], ethhead[8], ethhead[9], ethhead[10],
-				//		ethhead[11]);
-				//printf("              Type : %02x:%02x \n", ethhead[12],
-				//		ethhead[13]);
-				//printf("               MSG : %d \n", ethhead[14]);
-				//printf("\n");
+				printf("        MAC Origin : "
+						"%02x:%02x:%02x:%02x:%02x:%02x\n", ethhead[6],
+						ethhead[7], ethhead[8], ethhead[9], ethhead[10],
+						ethhead[11]);
+				printf("              Type : %02x:%02x \n", ethhead[12],
+						ethhead[13]);
+				printf("               MSG : %d \n", ethhead[14]);
+				printf("\n");
 
 				MPLROtherReceivedCount++;
 
 				uint8_t checkMSGType = (ethhead[14]);
-
+				
+				printf("\n%s : checkMSGType=%d\n",__FUNCTION__,checkMSGType);
 				if (checkMSGType == 1) {
-					//printf("\n");
-					//printf("MPLR Ctrl Message received \n");
+					printf("\n");
+					printf("MPLR Ctrl Message received \n");
 					MPLRCtrlReceivedCount++;
 					MPLROtherReceivedCount--;
 
 					int tierAddrTotal = (ethhead[15]);
 
-					//printf("  No. of Tier Addr : %d\n", tierAddrTotal);
+					printf("  No. of Tier Addr : %d\n", tierAddrTotal);
 
-					// Print multiple tier address based on length
+					//Print multiple tier address based on length
 					int lengthIndex = 16;
 					int z = 0;
 
@@ -568,18 +565,18 @@ int _get_MACTest(struct addr_tuple *myAddr, int numTierAddr) {
 					unsigned char *ethhead2;
 					ethhead2 = (unsigned char *) (ethhead + 6);
 
-					//printf(
-					//		" MAC Origin Copied : %02x:%02x:%02x:%02x:%02x:%02x \n",
-					//		ethhead2[0], ethhead2[1], ethhead2[2], ethhead2[3],
-					//		ethhead2[4], ethhead2[5]);
-					//printf("\n");
+					printf(
+							" MAC Origin Copied : %02x:%02x:%02x:%02x:%02x:%02x \n",
+							ethhead2[0], ethhead2[1], ethhead2[2], ethhead2[3],
+							ethhead2[4], ethhead2[5]);
+					printf("\n");
 
 				} // checkMsgType == 1 is over here
 
 				if (checkMSGType == 2) {
 
 					//printf("\n");
-					//printf("TEST: MPLR Data Message received \n");
+					printf("TEST: MPLR Data Message received \n");
 					MPLRDataReceivedCount++;
 					MPLROtherReceivedCount--;
 
@@ -587,14 +584,14 @@ int _get_MACTest(struct addr_tuple *myAddr, int numTierAddr) {
 					// (below line) to be implemented properly
 					//printMPLRPacketDetails(abc,xyz);
 
-					//printf("Printing full MPLR Data packet \n");
+					printf("Printing full MPLR Data packet \n");
 
 					int j = 0;
 					for (; j < n - 14; j++) {
 
 						//	Printing MPLR Data Packet
-						//printf("MPLR Content : %d : %02x  \n", j,
-						//		buffer[j] & 0xff);
+						printf("MPLR Content : %d : %02x  \n", j,
+								buffer[j] & 0xff);
 					}
 
 					//printf("\n");

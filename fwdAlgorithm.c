@@ -214,26 +214,33 @@ int packetForwardAlgorithm(char myTierAdd[], char desTierAdd[]) {
 				{
 					//checking for case 4
 
-					printf("Case:4 [TRUE] \n");
-					char* parentTierAddress;
-					memset(parentTierAddress,'\0',20);
+					printf("Case:4 [TRUE] My Tier Value ==  Destination Tier Value && Tier Value !=1 \n");
+					char*  parentTierAddress;
+				//	memset(parentTierAddress,'\0',20);
+					
+					char tempMyTierAddress[20];
+					memcpy(tempMyTierAddress,myTierAdd,strlen(myTierAdd)+1);
 
+					printf("Case:4 Trying to get the parent address from myTierAdd=%s \n",tempMyTierAddress);
 					//trying to get the parent 
-					parentTierAddress = getParent(myTierAdd,'.');
-
+					parentTierAddress = getParent(tempMyTierAddress,'.');
+					printf("Case:4 parentTierAddress=%s myTierAdd=%s \n",parentTierAddress,myTierAdd);
+					
 					//sending the packet from the current node to the parent node
 					boolean checkFWDSet = setByTierOnly(parentTierAddress, true);
 						
 					if (checkFWDSet == true)
 					{
+						printf(" checkFWDSet == true , setting the fwdSet \n");
+						fwdSet = SUCCESS; //to-do need of this variable ?
 						returnValue = SUCCESS;
 					} 
 					else 
 					{
 						printf("ERROR: Failed to set to the parent Tier Address\n");
 						returnValue = ERROR;
+						fwdSet = ERROR; //to-do need of this variable ?
 					}
-
 				}
 			}
 			else

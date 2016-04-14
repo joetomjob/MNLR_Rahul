@@ -27,6 +27,10 @@ extern boolean setByTierPartial(char inTier[20], boolean setFWDFields);
 extern boolean setByTierOnly(char inTier[20], boolean setFWDFields);
 extern boolean setByTierManually(char inTier[20], boolean setFWDFields);
 extern int getUniqueChildIndex(char strCheck[]);
+extern void findParntLongst(char* myTierAdd,char* parentTierAdd);
+extern void printNeighbourTable();
+extern int examineNeighbourTable(char* desTierAdd,char* longstMatchingNgbr);
+
 
 int packetForwardAlgorithm(char currentTier[], char desTier[]);
 boolean optimusForwardAlgorithm(char currentTier[], char desTier[]);
@@ -251,20 +255,19 @@ int packetForwardAlgorithm(char myTierAdd[], char desTierAdd[]) {
 				int myTierValue = getTierVal(myTierAdd);
 				int destTierValue = getTierVal(desTierAdd);
 
-				/*      If Destination UID is a substring of My UID
-							// Destination node is my parent/grandparent
-							Forward packet to my parent with the longest substring match 
-						Else
-						{ 
-							
-						}
-				*/
 
 				char destUID[20];
 				char myUID[20];
 
 				getUID(myUID,myTierAdd);
 				getUID(destUID,desTierAdd);
+
+
+				//Forward packet to my parent with the longest substring match
+				char parentTierAdd[20];
+				memset(parentTierAdd,'\0',20);
+				printNeighbourTable();
+				findParntLongst(myTierAdd,parentTierAdd);
 
 				//Case:5A
 				if(myTierValue > destTierValue)
@@ -273,18 +276,49 @@ int packetForwardAlgorithm(char myTierAdd[], char desTierAdd[]) {
 
 					if(check == true)
 					{	
-						//Forward packet to my parent with the longest substring match
+
+						//sending the packet from the current node to the parent node
+						boolean checkFWDSet = setByTierOnly(parentTierAdd, true);
+						
+						if (checkFWDSet == true)
+						{
+							printf("checkFWDSet == true , setting the fwdSet \n");
+							fwdSet = SUCCESS; //to-do need of this variable ?
+							returnValue = SUCCESS;
+						} 
+						else 
+						{
+							printf("ERROR: Failed to set to the parent Tier Address\n");
+							returnValue = ERROR;
+							fwdSet = ERROR; //to-do need of this variable ?
+						}
 					}
 					else
 					{
-						//Print table
+						char* longstMatchingNgbr;
+						printNeighbourTable();
+						int isDestUIDSubNeigbUID = examineNeighbourTable(desTierAdd,longstMatchingNgbr);
+						
+						//if not success , set the next node to my parent
+						if(isDestUIDSubNeigbUID != SUCCESS){
+							longstMatchingNgbr = parentTierAdd;
+						}
 
-						//Examine every neighbor table entry
-					
-						//If any Destination UID is a substring of a neighbor node UID
-							//Forward packet to the neighbor with the longest substring match
-						//Else
-							//Forward packet to my parent
+						//sending the packet from the current node to the next node
+						boolean checkFWDSet = setByTierOnly(longstMatchingNgbr, true);
+						
+						if (checkFWDSet == true)
+						{
+							printf("checkFWDSet == true , setting the fwdSet \n");
+							fwdSet = SUCCESS; //to-do need of this variable ?
+							returnValue = SUCCESS;
+						} 
+						else 
+						{
+							printf("ERROR: Failed to set to the parent Tier Address\n");
+							returnValue = ERROR;
+							fwdSet = ERROR; //to-do need of this variable ?
+						}
 					}
 				}
 				else //Case:5B If( My Tier Value < Destination Tier Value)
@@ -298,6 +332,62 @@ int packetForwardAlgorithm(char myTierAdd[], char desTierAdd[]) {
 						//		Forward packet to the matching neighbor
 						//	Else
 						//		Forward packet to my parent
+				
+					boolean check = checkIfDestUIDSubStringUID(myUID,destUID);
+
+					if(check == true)
+					{	
+						//Forward packet to my child with the longest substring match
+						char childTierAdd[20];
+						memset(childTierAdd,'\0',20);
+
+						printNeighbourTable();
+						findChildLongst(myTierAdd,childTierAdd);
+
+						//sending the packet from the current node to the child node
+						boolean checkFWDSet = setByTierOnly(childTierAdd, true);
+						
+						if (checkFWDSet == true)
+						{
+							printf("checkFWDSet == true , setting the fwdSet \n");
+							fwdSet = SUCCESS; //to-do need of this variable ?
+							returnValue = SUCCESS;
+						} 
+						else 
+						{
+							printf("ERROR: Failed to set to the parent Tier Address\n");
+							returnValue = ERROR;
+							fwdSet = ERROR; //to-do need of this variable ?
+						}
+					}
+					else
+					{
+						char* longstMatchingNgbr;
+						printNeighbourTable();
+						int isDestUIDSubNeigbUID = examineNeighbourTable(myUID,longstMatchingNgbr);
+						
+						//if not success , set the next node to my parent
+						if(isDestUIDSubNeigbUID != SUCCESS){
+							longstMatchingNgbr = parentTierAdd;
+						}
+
+						//sending the packet from the current node to the next node
+						boolean checkFWDSet = setByTierOnly(longstMatchingNgbr, true);
+						
+						if (checkFWDSet == true)
+						{
+							printf("checkFWDSet == true , setting the fwdSet \n");
+							fwdSet = SUCCESS; //to-do need of this variable ?
+							returnValue = SUCCESS;
+						} 
+						else 
+						{
+							printf("ERROR: Failed to set to the parent Tier Address\n");
+							returnValue = ERROR;
+							fwdSet = ERROR; //to-do need of this variable ?
+						}
+					}
+
 				}	
 			}
 		}

@@ -519,5 +519,140 @@ boolean setByTierManually(char inTier[20], boolean setFWDFields) {
 	return returnVal;
 }
 
+
+
+/**
+ * contains(char[])
+ *
+ * whether there is a tier address in neighbor table or not
+ *
+ * @return true or false
+ */
+void printNeighbourTable() {
+
+	struct nodeHL *fNode = headHL;
+	char* temp;
+	if (fNode == NULL) {
+		printf("ERROR: Neighbor List is empty (Isolated Node)\n");
+		return;
+	}
+	// traverse the list
+	// testing
+	printf("\n*************** Neighbor Table *************");
+	while (fNode != NULL) {
+		temp  = fNode->tier;		
+		printf("\n ------- %s --------",temp);
+		fNode = fNode->next;
+	}
+	return;
+}
+
+/**
+ * contains(char[])
+ *
+ * whether there is a tier address in neighbor table or not
+ *
+ * @return true or false
+ */
+ void findParntLongst(char* myTierAdd,char* parentTierAdd) 
+ {
+	struct nodeHL *fNode = headHL;
+	char* temp;
+	if (fNode == NULL) {
+		printf("ERROR: Neighbor List is empty (Isolated Node)\n");
+		return;
+	}
+	
+	//initializing the longest matching length to 0
+	int longestMtchLength = 0;
+
+	while (fNode != NULL) {
+		temp  = fNode->tier;		
+		
+		if(strlen(myTierAdd) > strlen(temp)){
+
+			int tempLen = lenthComputationSai(myTierAdd,temp);
+			if(tempLen > longestMtchLength){
+				longestMtchLength = tempLen;
+				strcpy(parentTierAdd, temp);
+			}
+		}
+		fNode = fNode->next;
+	}
+	return;
+ }
+
+
+ void findChildLongst(char* myTierAdd,char* childTierAdd)
+ {
+	struct nodeHL *fNode = headHL;
+	char* temp;
+	if (fNode == NULL) {
+		printf("ERROR: Neighbor List is empty (Isolated Node)\n");
+		return;
+	}
+	
+	//initializing the longest matching length to 0
+	int longestMtchLength = 0;
+
+	while (fNode != NULL) {
+		temp  = fNode->tier;		
+		
+		if(strlen(myTierAdd) < strlen(temp)){
+
+			int tempLen = lenthComputationSai(myTierAdd,temp);
+			if(tempLen > longestMtchLength){
+				longestMtchLength = tempLen;
+				strcpy(childTierAdd, temp);
+			}
+		}
+		fNode = fNode->next;
+	}
+	return;
+ }
+
+/**
+ * contains(char[])
+ *
+ * whether there is a tier address in neighbor table or not
+ *
+ * @return true or false
+ */
+ int examineNeighbourTable(char* desTierAdd,char* longstMatchingNgbr) 
+ {
+ 	int retVal = 1; //ERROR / FAILURE
+	struct nodeHL *fNode = headHL;
+	char* temp;
+	if (fNode == NULL) {
+		printf("ERROR: Neighbor List is empty (Isolated Node)\n");
+		return;
+	}
+	
+	//initializing the longest matching length to 0
+	int longestMtchLength = 0; 
+
+	while (fNode != NULL) {
+		temp  = fNode->tier;		
+		int tempLen = lenthComputationSai(desTierAdd,temp);
+		if(tempLen > longestMtchLength){
+			longestMtchLength = tempLen;
+			strcpy(longstMatchingNgbr, temp);
+			retVal = 0;
+		}
+		fNode = fNode->next;
+	}
+
+	return retVal;
+ }
+
+
+
+ int lenthComputationSai(char* s1 , char* s2){
+ 	return 0;
+ }
+
+
+
+
 #endif
 

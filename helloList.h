@@ -522,12 +522,13 @@ boolean setByTierManually(char inTier[20], boolean setFWDFields) {
 
 
 /**
- * contains(char[])
+ * printNeighbourTable()
  *
- * whether there is a tier address in neighbor table or not
+ * print the neighbour table
  *
- * @return true or false
+ * @return void
  */
+
 void printNeighbourTable() {
 
 	struct nodeHL *fNode = headHL;
@@ -548,11 +549,12 @@ void printNeighbourTable() {
 }
 
 /**
- * contains(char[])
+ * findParntLongst(char[],char[])
  *
- * whether there is a tier address in neighbor table or not
+ * return the longest matching parent adress in the table 
  *
- * @return true or false
+ * @return void
+
  */
  void findParntLongst(char* myTierAdd,char* parentTierAdd) 
  {
@@ -571,7 +573,7 @@ void printNeighbourTable() {
 		
 		if(strlen(myTierAdd) > strlen(temp)){
 
-			int tempLen = lenthComputationSai(myTierAdd,temp);
+			int tempLen = findMatchedTeirvValueLength(myTierAdd,temp);
 			if(tempLen > longestMtchLength){
 				longestMtchLength = tempLen;
 				strcpy(parentTierAdd, temp);
@@ -582,6 +584,16 @@ void printNeighbourTable() {
 	return;
  }
 
+
+
+/**
+ * findChildLongst(char[],char[])
+ *
+ * return the longest matching child adress in the table 
+ *
+ * @return void
+
+ */
 
  void findChildLongst(char* myTierAdd,char* childTierAdd)
  {
@@ -600,7 +612,7 @@ void printNeighbourTable() {
 		
 		if(strlen(myTierAdd) < strlen(temp)){
 
-			int tempLen = lenthComputationSai(myTierAdd,temp);
+			int tempLen = findMatchedTeirvValueLength(myTierAdd,temp);
 			if(tempLen > longestMtchLength){
 				longestMtchLength = tempLen;
 				strcpy(childTierAdd, temp);
@@ -612,11 +624,12 @@ void printNeighbourTable() {
  }
 
 /**
- * contains(char[])
+ * examineNeighbourTable(char[])
  *
- * whether there is a tier address in neighbor table or not
+ * return the longest matching adress in the table with the destination address
  *
- * @return true or false
+ * @return void
+
  */
  int examineNeighbourTable(char* desTierAdd,char* longstMatchingNgbr) 
  {
@@ -633,7 +646,7 @@ void printNeighbourTable() {
 
 	while (fNode != NULL) {
 		temp  = fNode->tier;		
-		int tempLen = lenthComputationSai(desTierAdd,temp);
+		int tempLen = findMatchedTeirvValueLength(desTierAdd,temp);
 		if(tempLen > longestMtchLength){
 			longestMtchLength = tempLen;
 			strcpy(longstMatchingNgbr, temp);
@@ -646,9 +659,76 @@ void printNeighbourTable() {
  }
 
 
+/**
+ * findMatchedTeirvValueLength(char[])
+ *
+ * find the matched length of two tier values
+ *
+ * @return length (int)
+ */
 
- int lenthComputationSai(char* s1 , char* s2){
- 	return 0;
+ int findMatchedTeirvValueLength(char* add1 , char* add2){
+
+
+ 	int matchedLength = 0;
+ 	int posAdd1 = 0;
+ 	int posAdd2 = 0;
+ 	int val1 = 0;
+ 	int val2 = 0;
+ 	
+		
+
+ 	printf("\n add1 = %s add2 = %s \n",add1,add2);   
+	while(add1[posAdd1++] != '.');
+ 	while(add2[posAdd2++] != '.');
+		
+ 	// printf("\n posAdd1 = %d posAdd2 = %d \n",posAdd1,posAdd2);  
+
+ 	while( (add1[posAdd1] != '\0') && (add2[posAdd2] != '\0'))
+ 	{
+		
+ 		// printf("\n posAdd1 = %d  \n",posAdd1);  
+ 		// printf("\n add1[posAdd1] =%c",add1[posAdd1]);
+		while( (add1[posAdd1] != '.') && (add1[posAdd1] != '\0'))
+ 		{
+
+ 			// printf("\n add1[posAdd1] = %c  posAdd1=%d\n",add1[posAdd1],posAdd1);   
+			val1 = (val1 * 10 )+  add1[posAdd1] - '0' ;
+			posAdd1++;
+ 		}
+		posAdd1++;
+
+		
+	 	// printf("\n posAdd2 = %d \n",posAdd2);  
+ 		// printf("\n add2[posAdd2] =%c",add2[posAdd2]);
+ 		while( (add2[posAdd2] != '.') && (add2[posAdd2] != '\0'))
+ 		{
+ 			// printf("\n add2[posAdd2] = %c  posAdd2=%d\n",add2[posAdd2],posAdd2);   
+ 			val2 = (val2 * 10 )+  add2[posAdd2] - '0' ;
+			posAdd2++;
+ 		}
+		posAdd2++;
+
+ 		// printf("\nval1 = %d val2 = %d\n",val1,val2);
+
+ 		// printf("\n  add1[posAdd1] =%c add2[posAdd2] =%c",add1[posAdd1],add2[posAdd2]);
+
+ 		if(val1 == val2)
+ 		{
+ 			matchedLength++;
+ 		}
+ 		else
+ 		{
+ 			break;
+ 		}
+		
+		if(add1[posAdd1] == '\0' || add2[posAdd2] == '\0')
+			break;
+
+ 		val1 = val2 = 0;
+
+ 	} 
+ 	return matchedLength;
  }
 
 

@@ -272,11 +272,13 @@ int packetForwardAlgorithm(char myTierAdd[], char desTierAdd[]) {
 				//Case:5A
 				if(myTierValue > destTierValue)
 				{
+					printf("\n Entered case 5A");
 					boolean check = checkIfDestUIDSubStringUID(destUID,myUID);
 
 					if(check == true)
 					{	
-
+						printf("\n checkIfDestUIDSubStringUID = TRUE");
+						printf("\n Sending packet to parent %s", parentTierAdd);
 						//sending the packet from the current node to the parent node
 						boolean checkFWDSet = setByTierOnly(parentTierAdd, true);
 						
@@ -295,15 +297,19 @@ int packetForwardAlgorithm(char myTierAdd[], char desTierAdd[]) {
 					}
 					else
 					{
-						char* longstMatchingNgbr;
+						printf("\n checkIfDestUIDSubStringUID = FALSE");
+						char longstMatchingNgbr[20];
+						memset(longstMatchingNgbr,'\0',20);
+
 						printNeighbourTable();
 						int isDestUIDSubNeigbUID = examineNeighbourTable(desTierAdd,longstMatchingNgbr);
 						
 						//if not success , set the next node to my parent
 						if(isDestUIDSubNeigbUID != SUCCESS){
-							longstMatchingNgbr = parentTierAdd;
+							strcpy(longstMatchingNgbr,parentTierAdd);
 						}
-
+						
+						printf("\n Sending the packet to the longest matching neighbour %s",longstMatchingNgbr);
 						//sending the packet from the current node to the next node
 						boolean checkFWDSet = setByTierOnly(longstMatchingNgbr, true);
 						
@@ -332,8 +338,8 @@ int packetForwardAlgorithm(char myTierAdd[], char desTierAdd[]) {
 						//		Forward packet to the matching neighbor
 						//	Else
 						//		Forward packet to my parent
-				
-					boolean check = checkIfDestUIDSubStringUID(myUID,destUID);
+					printf("\n Enter case 5B");	
+					boolean check = checkIfDestUIDSubStringUID(destUID,myUID);
 
 					if(check == true)
 					{	
@@ -343,7 +349,9 @@ int packetForwardAlgorithm(char myTierAdd[], char desTierAdd[]) {
 
 						printNeighbourTable();
 						findChildLongst(myTierAdd,childTierAdd);
-
+						
+						printf("\n checkIfDestUIDSubStringUID = TRUE");
+						printf("\n Sending the packet to longest child %s",childTierAdd);
 						//sending the packet from the current node to the child node
 						boolean checkFWDSet = setByTierOnly(childTierAdd, true);
 						
@@ -362,15 +370,18 @@ int packetForwardAlgorithm(char myTierAdd[], char desTierAdd[]) {
 					}
 					else
 					{
-						char* longstMatchingNgbr;
+						char longstMatchingNgbr[20];
+						memset(longstMatchingNgbr,'\0',20);
 						printNeighbourTable();
-						int isDestUIDSubNeigbUID = examineNeighbourTable(myUID,longstMatchingNgbr);
+						int isDestUIDSubNeigbUID = examineNeighbourTable(desTierAdd,longstMatchingNgbr);
 						
 						//if not success , set the next node to my parent
 						if(isDestUIDSubNeigbUID != SUCCESS){
-							longstMatchingNgbr = parentTierAdd;
+							strcpy(longstMatchingNgbr,parentTierAdd);
 						}
-
+						
+						printf("\n checkIfDestUIDSubStringUID = FALSE");
+                                                printf("\n Sending the packet to longest neighbour %s",longstMatchingNgbr);
 						//sending the packet from the current node to the next node
 						boolean checkFWDSet = setByTierOnly(longstMatchingNgbr, true);
 						
@@ -398,7 +409,43 @@ int packetForwardAlgorithm(char myTierAdd[], char desTierAdd[]) {
 
 boolean checkIfDestUIDSubStringUID(char* destUID,char* myUID)
 {
+	printf("\n myUID = %s destUID=%s",myUID,destUID);
+
+	//3.1 //1
+
+	int pos1 = 0;
+	int pos2 = 0;
+
+	while(destUID[pos1] != '\0' && myUID[pos2] != '\0'){
+
+		int destVal = 0;
+
+		while(destUID[pos1] != '\0' && destUID[pos1] != '.'){
+
+		 	destVal = destVal * 10 + destUID[pos1] - '0';
+		 	pos1++;
+		}
+		pos1++;
+
+		int myVal = 0;
+
+		while(myUID[pos2] != '\0' && myUID[pos2] != '.'){
+
+		 	myVal = myVal * 10 + myUID[pos2] - '0';
+		 	pos2++;
+		}
+		pos2++;
+		
+		printf("\n destVal =%d myVal=%d",destVal,myVal);
+		if(destVal != myVal){
+			printf("\n False");
+			return false;
+		}
+
+	}
+	printf("\n True");
 	return true;
+
 }
 
 
@@ -585,6 +632,7 @@ void getUID(char* curUID,char* currentTier){
 			k++;
 
 	}
+	curUID[k] = '\0';
 }
 
 
@@ -624,7 +672,5 @@ int isFWDFieldsSet() {
 
 	return fwdSet;
 }
-
-
 
 

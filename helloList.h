@@ -573,7 +573,7 @@ void printNeighbourTable() {
 		
 		if(strlen(myTierAdd) > strlen(temp)){
 
-			int tempLen = findMatchedTeirvValueLength(myTierAdd,temp);
+			int tempLen = findMatchedTeirAddrLength(myTierAdd,temp);
 			if(tempLen > longestMtchLength){
 				longestMtchLength = tempLen;
 				strcpy(parentTierAdd, temp);
@@ -612,7 +612,7 @@ void printNeighbourTable() {
 		
 		if(strlen(myTierAdd) < strlen(temp)){
 
-			int tempLen = findMatchedTeirvValueLength(myTierAdd,temp);
+			int tempLen = findMatchedTeirAddrLength(myTierAdd,temp);
 			if(tempLen > longestMtchLength){
 				longestMtchLength = tempLen;
 				strcpy(childTierAdd, temp);
@@ -642,11 +642,15 @@ void printNeighbourTable() {
 	}
 	
 	//initializing the longest matching length to 0
-	int longestMtchLength = 0; 
+	int longestMtchLength = 0;
+	int tempLen = 0; 
 
 	while (fNode != NULL) {
-		temp  = fNode->tier;		
-		int tempLen = findMatchedTeirvValueLength(desTierAdd,temp);
+		temp  = fNode->tier;	
+		printf("\n%s temp->%s desTierAdd-->%s",__FUNCTION__,temp,desTierAdd);
+		printf("\n %s Checking the match for %s in desTierAdd=%s",__FUNCTION__,temp,desTierAdd);	
+		tempLen = findMatchedTeirAddrLength(desTierAdd,temp);
+		printf("\n %s Matched Length = %d",__FUNCTION__,tempLen);	
 		if(tempLen > longestMtchLength){
 			longestMtchLength = tempLen;
 			strcpy(longstMatchingNgbr, temp);
@@ -660,15 +664,16 @@ void printNeighbourTable() {
 
 
 /**
- * findMatchedTeirvValueLength(char[])
+ * findMatchedTeirAddrLength(char[],char[])
  *
  * find the matched length of two tier values
  *
  * @return length (int)
  */
 
- int findMatchedTeirvValueLength(char* add1 , char* add2){
 
+
+ int findMatchedTeirAddrLength(char* add1 , char* add2){
 
  	int matchedLength = 0;
  	int posAdd1 = 0;
@@ -676,9 +681,7 @@ void printNeighbourTable() {
  	int val1 = 0;
  	int val2 = 0;
  	
-		
-
- 	printf("\n add1 = %s add2 = %s \n",add1,add2);   
+ 	printf("\n %s Enter : add1 = %s add2 = %s \n",__FUNCTION__,add1,add2);   
 	while(add1[posAdd1++] != '.');
  	while(add2[posAdd2++] != '.');
 		
@@ -728,6 +731,7 @@ void printNeighbourTable() {
  		val1 = val2 = 0;
 
  	} 
+ 	printf("\n %s :Exit- Matched Length = %d",__FUNCTION__,matchedLength);
  	return matchedLength;
  }
 

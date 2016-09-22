@@ -52,7 +52,8 @@ boolean checkIfDestUIDSubStringUID(char* destUID,char* myUID);
  *
  * @return returnValue   (int) - algorithm return value (-1/0/1)
  */
-int packetForwardAlgorithm(char myTierAdd[], char desTierAdd[]) {
+int packetForwardAlgorithm(char myTierAdd[], char desTierAdd[]) 
+{
 
 	printf("\n\nEntering packetForwardAlgorithm \n");
 
@@ -60,6 +61,7 @@ int packetForwardAlgorithm(char myTierAdd[], char desTierAdd[]) {
 	boolean checkOFA = false;
 
 
+	// Case:1 If( Destination Label == My Label )
 	if ((strlen(myTierAdd) == strlen(desTierAdd))
 			&& ((strncmp(myTierAdd, desTierAdd, strlen(desTierAdd)) == 0)))
 	{
@@ -70,8 +72,9 @@ int packetForwardAlgorithm(char myTierAdd[], char desTierAdd[]) {
 
 		if (checkIfFWDSet == true)
 		{
-			checkOFA = true;  //to-do need of this variable ?
-			fwdSet = SUCCESS; //to-do need of this variable ?
+			printf("Packet send to the ipnode successfully"); 
+			checkOFA = true;  
+			fwdSet = SUCCESS; 
 			returnValue = SUCCESS;
 		}
 		else
@@ -81,331 +84,186 @@ int packetForwardAlgorithm(char myTierAdd[], char desTierAdd[]) {
 			returnValue = ERROR;
 		}
 	}
-	else
+	else 
 	{
 		printf("Case:1 [NOT TRUE]  My Tier [%s] = Destination Tier [%s] \n",myTierAdd,desTierAdd);
 		// Check for Case 2 : if Destinaton label is in my neighbour table
 		if (containsTierAddress(desTierAdd) == true)
 		{
 			// Case2 : Destinaton label is in my neighbour table
-			printf("Case:2 Destinaton label is in my neighbour table \n");
+			printf("[TRUE] Case:2 Destinaton label is in my neighbour table \n");
 
 			//Forward Packet to the port curresponding  to the Destination label
-
-			//to-do	//Doubt here how the port is found out here  , the code is same as in case 1
-			boolean checkFWDSet = setByTierOnly(desTierAdd, true);
-
-			//Checking if the packet was able to successfully sent to the forward port.
-			if (checkFWDSet == true)
-			{
-				checkOFA = true;
-				fwdSet = SUCCESS;
-				returnValue = SUCCESS;
-			}
-			else
-			{
-				printf("Case2:ERROR: Failed to set FWD Tier Address\n");
-				fwdSet = ERROR;
-				returnValue = ERROR;
-			}
+			returnValue = setNextTierToSendPacket(desTierAdd);
 
 		}
 		else
 		{
-
-
-			//Goto case3
-			/*
-			Check 3:
-			Is  (My_TV ==  Dest_TV)  && TV == 1
-			Process 1: Full mesh topology
-				Check my neighbor table
-				Dest_Label is in my neighbor table
-				Forward the MPLR encapsulated packet to the port of access corresponding to the Dest_Label
-				Not in my neighbor table – goto Process 2
-				Process 2: Linear topology
-								Check My_UID, Dest_UID
-				If (My_UID < Dest_UID )
-				Send MNLR packet to TV.(My_UID + 1 )
-				Else  - Send MNLR packet to TV.( My_UID -1) }
-			*/
-
+ 			printf("[FALSE] Case:2 Destinaton label is in my neighbour table \n");
 			int myTierValue =  getTierVal(myTierAdd);
 			int destTierValue = getTierVal(desTierAdd);
+			
+			//Case 3 : If ( (My Tier Value ==  Destination Tier Value)  && (Tier Value !=1) ) 
 
-			printf("Case:2 [NOT TRUE]  My Tier [%s] = Destination Tier [%s] \n",myTierAdd,desTierAdd);
-			if(myTierValue == destTierValue)
+			if( (myTierValue == destTierValue) && (myTierValue != 1))
 			{
-				//checking for case 3
-				if(myTierValue == 1)
-				{
-					//Case:3 TRUE , Checking cases 3A and 3B
-					printf("Case:3 [TRUE] myTierValue == destTierValue && myTierValue == 1 \n");
-					if (containsTierAddress(desTierAdd) == true)
-					{
-						//Case:3A True , same as case2
-						printf("Case:3A [TRUE] Destinaton label is in my neighbor table\n");
-						
-						//Forwarding the packet to the destination tier address port
-						boolean checkFWDSet = setByTierOnly(desTierAdd, true);
-
-						//Checking if the packet was successfully sent
-						if (checkFWDSet == true)
-						{
-							checkOFA = true;
-							fwdSet = 0;
-							returnValue = SUCCESS;
-						}
-						else
-						{
-						   printf("ERROR: Failed to set FWD Tier Address (Case: 2)\n");
-							fwdSet = 1;
-							returnValue = ERROR;
-						}
-
-					}
-					else
-					{
-						printf("Case:3A [FALSE] Destinaton label is not in my neighbor table\n");
-						printf("Case:3B [TRUE] Destinaton label is not in my neighbor table\n");
-												
-						//Goto case3B
-						char myUID[20];
-						char destUID[20];
-						char nextTierAddress[20];
-						memset(nextTierAddress,'\0',20);
-
-						//Foriming the UIDs from my tier address and destination tier address
-						getUID(myUID,myTierAdd);
-						getUID(destUID,desTierAdd);
-						boolean checkUIDComp = false;
-
-						//Comparing the UIDs of my  tier and destination tier , returns true my tier < destination tier
-						checkUIDComp = compareUIDs(myUID,destUID);
-
-						if(checkUIDComp)
-						{
-							//formNextUID(nextUID,curUID,true); //+1 case
-							formNextUIDtoTransferInCase3B(nextTierAddress,myTierAdd,true);
-						}
-						else
-						{
-							//formNextUID(nextUID,curUID,true); //-1 case
-							formNextUIDtoTransferInCase3B(nextTierAddress,myTierAdd,false);
-
-						}
-						printf("\n forwarding to nextTierAddress = %s\n",nextTierAddress);
-						//sendPacketTo Next UID
-						//to-do modify address with the UID .
-						boolean checkFWDSet = setByTierOnly(nextTierAddress, true);
-						
-						if (checkFWDSet == true)
-						{
-							printf("\n packet forwrded to nextTierAddress = %s\n",nextTierAddress);
-							returnValue = SUCCESS;
-							fwdSet = SUCCESS; //to-do need of this variable ?
-						} 
-						else 
-						{
-							printf("ERROR: Failed to set FWD Tier Address\n");
-							returnValue = ERROR;
-							
-							fwdSet = ERROR; //to-do need of this variable ?
-						}
-					}
-				}
-				else
-				{
-					//checking for case 4
-
-					printf("Case:4 [TRUE] My Tier Value ==  Destination Tier Value && Tier Value !=1 \n");
-					char*  parentTierAddress;
+				printf("Case:3 [TRUE] My Tier Value ==  Destination Tier Value && Tier Value !=1 \n");
+				char*  parentTierAddress;
 				//	memset(parentTierAddress,'\0',20);
-					
-					char tempMyTierAddress[20];
-					memcpy(tempMyTierAddress,myTierAdd,strlen(myTierAdd)+1);
-
-					printf("Case:4 Trying to get the parent address from myTierAdd=%s \n",tempMyTierAddress);
-					//trying to get the parent 
-					parentTierAddress = getParent(tempMyTierAddress,'.');
-					printf("Case:4 parentTierAddress=%s myTierAdd=%s \n",parentTierAddress,myTierAdd);
-					
-					//sending the packet from the current node to the parent node
-					boolean checkFWDSet = setByTierOnly(parentTierAddress, true);
-						
-					if (checkFWDSet == true)
-					{
-						printf(" checkFWDSet == true , setting the fwdSet \n");
-						fwdSet = SUCCESS; //to-do need of this variable ?
-						returnValue = SUCCESS;
-					} 
-					else 
-					{
-						printf("ERROR: Failed to set to the parent Tier Address\n");
-						returnValue = ERROR;
-						fwdSet = ERROR; //to-do need of this variable ?
-					}
-				}
+				
+				char tempMyTierAddress[20];
+				memcpy(tempMyTierAddress,myTierAdd,strlen(myTierAdd)+1);
+				printf("Case:3 Trying to get the parent address from myTierAdd=%s \n",tempMyTierAddress);
+				//trying to get the parent 
+				parentTierAddress = getParent(tempMyTierAddress,'.');
+				printf("Case:3 parentTierAddress=%s myTierAdd=%s \n",parentTierAddress,myTierAdd);
+				
+				returnValue = setNextTierToSendPacket(parentTierAddress);
 			}
 			else
 			{
-				//Case:5  My Tier Value !=  Destination Tier Value 
-				printf("Case:5  [TRUE] My Tier Value !=  Destination Tier Value \n");
-
-				int myTierValue = getTierVal(myTierAdd);
-				int destTierValue = getTierVal(desTierAdd);
-
+			//Case4 and 5: 
+				printf("Case:3 [FALSE] My Tier Value =  Destination Tier Value && Tier Value !=1 \n");
 
 				char destUID[20];
 				char myUID[20];
 
 				getUID(myUID,myTierAdd);
 				getUID(destUID,desTierAdd);
-
-
-				//Forward packet to my parent with the longest substring match
+				
 				char parentTierAdd[20];
 				memset(parentTierAdd,'\0',20);
 				printNeighbourTable();
 				findParntLongst(myTierAdd,parentTierAdd);
 
-				//Case:5A
-				if(myTierValue > destTierValue)
+
+				if(myTierValue != destTierValue)
 				{
-					printf("\n Entered case 5A");
-					boolean check = checkIfDestUIDSubStringUID(destUID,myUID);
-
-					if(check == true)
-					{	
-						printf("\n checkIfDestUIDSubStringUID = TRUE");
-						printf("\n Sending packet to parent %s", parentTierAdd);
-						//sending the packet from the current node to the parent node
-						boolean checkFWDSet = setByTierOnly(parentTierAdd, true);
-						
-						if (checkFWDSet == true)
-						{
-							printf("checkFWDSet == true , setting the fwdSet \n");
-							fwdSet = SUCCESS; //to-do need of this variable ?
-							returnValue = SUCCESS;
-						} 
-						else 
-						{
-							printf("ERROR: Failed to set to the parent Tier Address\n");
-							returnValue = ERROR;
-							fwdSet = ERROR; //to-do need of this variable ?
-						}
-					}
-					else
+					//case 4
+					if(myTierValue > destTierValue)
 					{
-						printf("\n checkIfDestUIDSubStringUID = FALSE");
-						char longstMatchingNgbr[20];
-						memset(longstMatchingNgbr,'\0',20);
+						printf("\n Entered case 4");
+						boolean check = checkIfDestUIDSubStringUID(destUID,myUID);
 
-						printNeighbourTable();
-						int isDestUIDSubNeigbUID = examineNeighbourTable(desTierAdd,longstMatchingNgbr);
-						
-						//if not success , set the next node to my parent
-						if(isDestUIDSubNeigbUID != SUCCESS){
-							strcpy(longstMatchingNgbr,parentTierAdd);
+						if(check == true)
+						{	
+							printf("\n checkIfDestUIDSubStringUID = TRUE");
+							printf("\n Sending packet to parent %s\n", parentTierAdd);
+							returnValue = setNextTierToSendPacket(parentTierAdd);
 						}
-						
-						printf("\n Sending the packet to the longest matching neighbour %s",longstMatchingNgbr);
-						//sending the packet from the current node to the next node
-						boolean checkFWDSet = setByTierOnly(longstMatchingNgbr, true);
-						
-						if (checkFWDSet == true)
+						else
 						{
-							printf("checkFWDSet == true , setting the fwdSet \n");
-							fwdSet = SUCCESS; //to-do need of this variable ?
-							returnValue = SUCCESS;
-						} 
-						else 
-						{
-							printf("ERROR: Failed to set to the parent Tier Address\n");
-							returnValue = ERROR;
-							fwdSet = ERROR; //to-do need of this variable ?
+							printf("\n checkIfDestUIDSubStringUID = FALSE");
+							char longstMatchingNgbr[20];
+							memset(longstMatchingNgbr,'\0',20);
+
+							printNeighbourTable();
+							int isDestUIDSubNeigbUID = examineNeighbourTable(desTierAdd,longstMatchingNgbr);
+							
+							//if not success , set the next node to my parent
+							if(isDestUIDSubNeigbUID != SUCCESS){
+								printf("\n Destination UID not a substring of any neighbour UID, setting the next address to parent address\n");
+								strcpy(longstMatchingNgbr,parentTierAdd);
+							}
+							else{
+								printf("\n Sending the packet to the longest matching neighbour %s",longstMatchingNgbr);
+							}
+							returnValue = setNextTierToSendPacket(longstMatchingNgbr);
 						}
 					}
+					//case 5
+					else 
+					{
+						printf("\n Entered case 5");	
+						boolean check = checkIfDestUIDSubStringUID(destUID,myUID);
+
+						if(check == true)
+						{	
+							printf("Case 5 : Destination UID substring of my UID ");
+							//Forward packet to my child with the longest substring match
+							char childTierAdd[20];
+							memset(childTierAdd,'\0',20);
+
+							printNeighbourTable();
+							findChildLongst(desTierAdd,childTierAdd);
+							
+							printf("\n checkIfDestUIDSubStringUID = TRUE \n");
+							printf("\n Sending the packet to longest child -%s\n",childTierAdd);
+							returnValue = setNextTierToSendPacket(childTierAdd);
+						}
+						else
+						{
+   							printf("Case 5 : Destination UID not a substring of my UID , sending to longest Matching Neighbour\n");
+							char longstMatchingNgbr[20];
+							memset(longstMatchingNgbr,'\0',20);
+							printNeighbourTable();
+							int isDestUIDSubNeigbUID = examineNeighbourTable(desTierAdd,longstMatchingNgbr);
+							
+							//if not success , set the next node to my parent
+							if(isDestUIDSubNeigbUID != SUCCESS){
+								strcpy(longstMatchingNgbr,parentTierAdd);
+							}
+						
+							printf("\n checkIfDestUIDSubStringUID = FALSE \n");
+	                                                printf("\n Sending the packet to longest neighbour %s \n",longstMatchingNgbr);
+	                        returnValue = setNextTierToSendPacket(longstMatchingNgbr);
+							
+						}
+
+					}	
 				}
-				else //Case:5B If( My Tier Value < Destination Tier Value)
-				{
-						//If My UID is a substring of Destination UID
-						// 		Destination node is a child /grandchild
-						//		Forward to my child with the longest substring match	
-						//Else
-						//	Examine every neighbor table entry
-						//  If a neighbor node UID is a substring of the Destination UID
-						//		Forward packet to the matching neighbor
-						//	Else
-						//		Forward packet to my parent
-					printf("\n Enter case 5B");	
-					boolean check = checkIfDestUIDSubStringUID(destUID,myUID);
-
-					if(check == true)
-					{	
-						//Forward packet to my child with the longest substring match
-						char childTierAdd[20];
-						memset(childTierAdd,'\0',20);
-
-						printNeighbourTable();
-						findChildLongst(myTierAdd,childTierAdd);
-						
-						printf("\n checkIfDestUIDSubStringUID = TRUE");
-						printf("\n Sending the packet to longest child %s",childTierAdd);
-						//sending the packet from the current node to the child node
-						boolean checkFWDSet = setByTierOnly(childTierAdd, true);
-						
-						if (checkFWDSet == true)
-						{
-							printf("checkFWDSet == true , setting the fwdSet \n");
-							fwdSet = SUCCESS; //to-do need of this variable ?
-							returnValue = SUCCESS;
-						} 
-						else 
-						{
-							printf("ERROR: Failed to set to the parent Tier Address\n");
-							returnValue = ERROR;
-							fwdSet = ERROR; //to-do need of this variable ?
-						}
-					}
-					else
-					{
-						char longstMatchingNgbr[20];
-						memset(longstMatchingNgbr,'\0',20);
-						printNeighbourTable();
-						int isDestUIDSubNeigbUID = examineNeighbourTable(desTierAdd,longstMatchingNgbr);
-						
-						//if not success , set the next node to my parent
-						if(isDestUIDSubNeigbUID != SUCCESS){
-							strcpy(longstMatchingNgbr,parentTierAdd);
-						}
-						
-						printf("\n checkIfDestUIDSubStringUID = FALSE");
-                                                printf("\n Sending the packet to longest neighbour %s",longstMatchingNgbr);
-						//sending the packet from the current node to the next node
-						boolean checkFWDSet = setByTierOnly(longstMatchingNgbr, true);
-						
-						if (checkFWDSet == true)
-						{
-							printf("checkFWDSet == true , setting the fwdSet \n");
-							fwdSet = SUCCESS; //to-do need of this variable ?
-							returnValue = SUCCESS;
-						} 
-						else 
-						{
-							printf("ERROR: Failed to set to the parent Tier Address\n");
-							returnValue = ERROR;
-							fwdSet = ERROR; //to-do need of this variable ?
-						}
-					}
-
-				}	
 			}
-		}
+		}		
 	}
-	printf("\n\n\n\n%s:Exit , returnValue = %d",__FUNCTION__,returnValue);
+	printf("\n\n%s:Exit , returnValue = %d \n",__FUNCTION__,returnValue);
 	return returnValue;
 }
+
+
+/**
+ * setNextTierToSendPacket(char[])
+ *
+ * method to set the address of next node to send the packet
+ *
+ * @param nodeAddress (char[]) - destination  node address
+ * @return returnValue   (int) - algorithm return SUCCESS if it is able to
+ 									else ERROR
+ */
+
+int setNextTierToSendPacket(char* nodeAddress)
+{
+	int returnValue = ERROR;
+	//sending the packet from the current node to the next node
+	boolean checkFWDSet = setByTierOnly(nodeAddress, true);
+	
+	if (checkFWDSet == true)
+	{
+		printf("checkFWDSet == true , setting the fwdSet \n");
+		fwdSet = SUCCESS; //to-do need of this variable ?
+		returnValue = SUCCESS;
+	} 
+	else 
+	{
+		printf("ERROR: Failed to set to the parent Tier Address\n");
+		returnValue = ERROR;
+		fwdSet = ERROR; //to-do need of this variable ?
+	}
+	return returnValue;
+
+}
+
+
+/**
+ * checkIfDestUIDSubStringUID(char[],char[])
+ *
+ * method to check if the destination UID is a substring of my UID
+ *
+ * @param destUID (char[]) - destination  UID
+ * @param myUID   (char[]) - current UID
+ *
+ * @return returnValue   (boolean) - algorithm return true if it is
+ 									else false
+ */
 
 boolean checkIfDestUIDSubStringUID(char* destUID,char* myUID)
 {

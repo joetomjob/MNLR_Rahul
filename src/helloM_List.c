@@ -308,6 +308,22 @@ int _get_MACTest(struct addr_tuple *myAddr, int numTierAddr) {
 
 			if_indextoname(tcIP, recvOnEtherPortIP);
 
+			// Fix for GENI , Ignoring messages from control interface
+			char* ctrlInterface = "eth0";
+			// printf("\n recvOnEtherPortIP = %s",recvOnEtherPortIP);
+			
+			// printf("\n ctrlInterface = %s",ctrlInterface);
+			// printf("\n strlen(recvOnEtherPortIP) = %d",strlen(recvOnEtherPortIP));
+			// printf("\n strlen(ctrlInterface) = %d",strlen(ctrlInterface));
+
+			//printf("\n (strcmp(recvOnEtherPortIP, ctrlInterface))= %d \n",strcmp(recvOnEtherPortIP, ctrlInterface));
+
+			if (strcmp(recvOnEtherPortIP, ctrlInterface) == 0) {
+				//printf("\n The message is from control interface. Hence Ignoring...");
+				continue;
+			}
+
+
 			if (ctrlIFName != NULL) {
 
 				if ((strncmp(recvOnEtherPortIP, ctrlIFName, strlen(ctrlIFName))
@@ -335,6 +351,15 @@ int _get_MACTest(struct addr_tuple *myAddr, int numTierAddr) {
 							ipHeadWithPayload[19]);
 					printf("IP Destination : %s  \n", ipDestTemp);
 
+	
+					unsigned char ipSourceTemp[7];
+					memset(ipSourceTemp, '\0', 7);
+					sprintf(ipSourceTemp, "%u.%u.%u.%u", ipHeadWithPayload[12],
+							ipHeadWithPayload[13], ipHeadWithPayload[14],
+							ipHeadWithPayload[15]);
+					printf("IP Source  : %s  \n", ipSourceTemp);
+
+					
 					printf("Calling Forwarding Algorithm - DataSend\n");
 
 					int packetFwdStatus = -1;
@@ -405,11 +430,21 @@ int _get_MACTest(struct addr_tuple *myAddr, int numTierAddr) {
 
 				setInterfaces();
 
+
 				unsigned char ipDestTemp[7];
 				sprintf(ipDestTemp, "%u.%u.%u.%u", ipHeadWithPayload[16],
 						ipHeadWithPayload[17], ipHeadWithPayload[18],
 						ipHeadWithPayload[19]);
-				printf("IP Destination : %s  \n", ipDestTemp);
+				printf("[2]IP Destination : %s  \n", ipDestTemp);
+ 				
+				 unsigned char ipSourceTemp[7];
+                                 memset(ipSourceTemp, '\0', 7);
+                                 sprintf(ipSourceTemp, "%u.%u.%u.%u", ipHeadWithPayload[12],
+                                                        ipHeadWithPayload[13], ipHeadWithPayload[14],
+                                                        ipHeadWithPayload[15]);
+                                 printf("IP Source  : %s  \n", ipSourceTemp);
+
+		
 
 				printf("Calling Forwarding Algorithm - DataSend\n");
 
@@ -462,6 +497,7 @@ int _get_MACTest(struct addr_tuple *myAddr, int numTierAddr) {
 
 				freeInterfaces();
 				interfaceListSize = 0;
+		
 
 			}
 
@@ -584,14 +620,13 @@ int _get_MACTest(struct addr_tuple *myAddr, int numTierAddr) {
 					// (below line) to be implemented properly
 					//printMPLRPacketDetails(abc,xyz);
 
-					printf("Printing full MPLR Data packet \n");
+			//		printf("Printing full MPLR Data packet \n");
 
 					int j = 0;
 					for (; j < n - 14; j++) {
 
 						//	Printing MPLR Data Packet
-						printf("MPLR Content : %d : %02x  \n", j,
-								buffer[j] & 0xff);
+			//			printf("MPLR Content : %d : %02x  \n", j,buffer[j] & 0xff);
 					}
 
 					//printf("\n");
@@ -1606,3 +1641,6 @@ bool isInterfaceActive(struct in_addr ip, int cidr) {
 	freeifaddrs(ifaddr);
         return false;
 }
+
+
+

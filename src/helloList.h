@@ -595,7 +595,7 @@ void printNeighbourTable() {
 
  */
 
- void findChildLongst(char* myTierAdd,char* childTierAdd)
+ void findChildLongst(char* desTierAdd,char* childTierAdd)
  {
 	struct nodeHL *fNode = headHL;
 	char* temp;
@@ -609,10 +609,10 @@ void printNeighbourTable() {
 
 	while (fNode != NULL) {
 		temp  = fNode->tier;		
-		
-		if(strlen(myTierAdd) < strlen(temp)){
+		printf("\n findChildLongst : Current Neighbour = %s \n",temp);
+		if(strlen(temp) <= strlen(desTierAdd)){
 
-			int tempLen = findMatchedTeirAddrLength(myTierAdd,temp);
+			int tempLen = findMatchedTeirAddrLength(desTierAdd,temp);
 			if(tempLen > longestMtchLength){
 				longestMtchLength = tempLen;
 				strcpy(childTierAdd, temp);
@@ -620,6 +620,8 @@ void printNeighbourTable() {
 		}
 		fNode = fNode->next;
 	}
+
+	printf("\n findChildLongst : Result = %s \n",childTierAdd);
 	return;
  }
 
@@ -628,6 +630,7 @@ void printNeighbourTable() {
  *
  * return the longest matching adress in the table with the destination address
  *
+
  * @return void
 
  */
@@ -642,7 +645,7 @@ void printNeighbourTable() {
 	}
 	
 	//initializing the longest matching length to 0
-	int longestMtchLength = 0;
+	int longestMtchLength = 1;
 	int tempLen = 0; 
 
 	while (fNode != NULL) {

@@ -521,35 +521,35 @@ int _get_MACTest(struct addr_tuple *myAddr, int numTierAddr) {
 
 			if (ethhead != NULL) {
 
-				printf("\n--------------------------------------"
-					"\n   MAC Destination : "
-						"%02x:%02x:%02x:%02x:%02x:%02x\n", ethhead[0],
-						ethhead[1], ethhead[2], ethhead[3], ethhead[4],
-						ethhead[5]);
+				// printf("\n--------------------------------------"
+				// 	"\n   MAC Destination : "
+				// 		"%02x:%02x:%02x:%02x:%02x:%02x\n", ethhead[0],
+				// 		ethhead[1], ethhead[2], ethhead[3], ethhead[4],
+				// 		ethhead[5]);
 
-				printf("        MAC Origin : "
-						"%02x:%02x:%02x:%02x:%02x:%02x\n", ethhead[6],
-						ethhead[7], ethhead[8], ethhead[9], ethhead[10],
-						ethhead[11]);
-				printf("              Type : %02x:%02x \n", ethhead[12],
-						ethhead[13]);
-				printf("               MSG : %d \n", ethhead[14]);
-				printf("\n");
+				// printf("        MAC Origin : "
+				// 		"%02x:%02x:%02x:%02x:%02x:%02x\n", ethhead[6],
+				// 		ethhead[7], ethhead[8], ethhead[9], ethhead[10],
+				// 		ethhead[11]);
+				// printf("              Type : %02x:%02x \n", ethhead[12],
+				// 		ethhead[13]);
+				// printf("               MSG : %d \n", ethhead[14]);
+				// printf("\n");
 
 				MPLROtherReceivedCount++;
 
 				uint8_t checkMSGType = (ethhead[14]);
 				
-				printf("\n%s : checkMSGType=%d\n",__FUNCTION__,checkMSGType);
+				// printf("\n%s : checkMSGType=%d\n",__FUNCTION__,checkMSGType);
 				if (checkMSGType == 1) {
-					printf("\n");
-					printf("MPLR Ctrl Message received \n");
+					//printf("\n");
+					//printf("MPLR Ctrl Message received \n");
 					MPLRCtrlReceivedCount++;
 					MPLROtherReceivedCount--;
 
 					int tierAddrTotal = (ethhead[15]);
 
-					printf("  No. of Tier Addr : %d\n", tierAddrTotal);
+					//printf("  No. of Tier Addr : %d\n", tierAddrTotal);
 
 					//Print multiple tier address based on length
 					int lengthIndex = 16;
@@ -601,18 +601,18 @@ int _get_MACTest(struct addr_tuple *myAddr, int numTierAddr) {
 					unsigned char *ethhead2;
 					ethhead2 = (unsigned char *) (ethhead + 6);
 
-					printf(
-							" MAC Origin Copied : %02x:%02x:%02x:%02x:%02x:%02x \n",
-							ethhead2[0], ethhead2[1], ethhead2[2], ethhead2[3],
-							ethhead2[4], ethhead2[5]);
-					printf("\n");
+					// printf(
+					// 		" MAC Origin Copied : %02x:%02x:%02x:%02x:%02x:%02x \n",
+					// 		ethhead2[0], ethhead2[1], ethhead2[2], ethhead2[3],
+					// 		ethhead2[4], ethhead2[5]);
+					// printf("\n");
 
 				} // checkMsgType == 1 is over here
 
 				if (checkMSGType == 2) {
 
 					//printf("\n");
-					printf("TEST: MPLR Data Message received \n");
+					// printf("TEST: MPLR Data Message received \n");
 					MPLRDataReceivedCount++;
 					MPLROtherReceivedCount--;
 

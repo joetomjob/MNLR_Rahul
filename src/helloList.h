@@ -645,7 +645,7 @@ void printNeighbourTable() {
 	}
 	
 	//initializing the longest matching length to 0
-	int longestMtchLength = 1;
+	int longestMtchLength = 0;
 	int tempLen = 0; 
 
 	while (fNode != NULL) {

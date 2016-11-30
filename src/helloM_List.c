@@ -123,6 +123,8 @@ int freeInterfaces();
 
 int _get_MACTest(struct addr_tuple *myAddr, int numTierAddr) {
 
+	printf("\n MNLR started  ... \n");
+
 	time_t time0 = time(0);
 	time_t time1;
 

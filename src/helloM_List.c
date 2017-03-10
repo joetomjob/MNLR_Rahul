@@ -22,6 +22,8 @@
 #include <sys/ioctl.h>
 #include <sys/param.h>
 #include <ifaddrs.h>
+#include <unistd.h>
+
 
 #include <net/ethernet.h>
 #include <signal.h>
@@ -39,6 +41,8 @@
 #include "baseConversion.h"
 
 #include "endNetworkUtils.h"
+
+
 
 extern int ctrlSend(char eth[], char pay[]);
 
@@ -67,6 +71,7 @@ extern void printMPLRPacketDetails(unsigned char mplrPacket[], int nSize);
 void checkEntriesToAdvertise();
 void checkForLinkFailures(struct addr_tuple *, int);
 bool isInterfaceActive(struct in_addr, int);
+void getMyTierAddresses();
 
 char *interfaceList[10];
 int interfaceListSize;
@@ -95,6 +100,27 @@ long long int errorCount = 0;
 int totalIPError = 0;
 int finalARGCValue = -100;
 int endNode = -1;
+FILE *fptr;
+int myTierValue = -1;
+int tierAddrCount = 0;
+int enableLogsScreen = 1;
+int enableLogsFile = 1;
+bool recvdLabel = false;
+
+struct labels{
+    char label[10];
+    label*  next;
+};
+
+// The labels allocated to each child node.
+labels allocatedLabels = null;
+
+// The label pool which contains the list of available child labels
+// in case if some node rejects a label.
+labels labelPool = null;
+
+// To keep the track of the children to give new names.
+int myChildCount = 0;
 
 int freqCount(char str[], char search);
 
@@ -123,7 +149,7 @@ int freeInterfaces();
 
 int _get_MACTest(struct addr_tuple *myAddr, int numTierAddr) {
 
-	printf("\n MNLR started  ... \n");
+	if(enableLogsFile) printf("\n MNLR started  ... \n");
 
 	time_t time0 = time(0);
 	time_t time1;
@@ -145,15 +171,19 @@ int _get_MACTest(struct addr_tuple *myAddr, int numTierAddr) {
 	struct sockaddr_ll src_addr;
 	struct sockaddr_ll src_addrIP;
 
+    // Creating the MNLR CONTROL SOCKET HERE
 	if ((sock = socket(AF_PACKET, SOCK_RAW, htons(0x8850))) < 0) {
 		errorCount++;
-		perror("ERROR: MPLR Socket ");
+		perror("ERROR: MNLR Socket ");
+		printf("\n ERROR: MNLR Socket ");
 
 	}
 
+    // Creating the MNLR IP SOCKET HERE
 	if ((sockIP = socket(AF_PACKET, SOCK_RAW, htons(0x0800))) < 0) {
 		errorCount++;
 		perror("ERROR: IP Socket ");
+		printf("\n ERROR: IP Socket ");
 
 	}
 
@@ -200,6 +230,7 @@ int _get_MACTest(struct addr_tuple *myAddr, int numTierAddr) {
 	freeInterfaces();
 	interfaceListSize = 0;
 
+    // Repeats the steps from now on
 	while (1) {
 
 		int flag = 0;
@@ -210,7 +241,7 @@ int _get_MACTest(struct addr_tuple *myAddr, int numTierAddr) {
 
 		char ctrlPayLoadB[200];
 
-                // Checking if we have end node link faliure and also to check if any new entries are added to the table.
+        // Checking if we have end node link failure and also to check if any new entries are added to the table.
 		// check for link failures.
 		if (!endNode) { // only does when node is an end node.
 			checkForLinkFailures(myAddr, numTierAddr);
@@ -234,8 +265,8 @@ int _get_MACTest(struct addr_tuple *myAddr, int numTierAddr) {
 			}
 		}
 
-                // check if there are entries to be advertised.
-                checkEntriesToAdvertise();
+        // check if there are entries to be advertised.
+        checkEntriesToAdvertise();
 
 		if (timeDiff >= 10) {
 
@@ -297,13 +328,16 @@ int _get_MACTest(struct addr_tuple *myAddr, int numTierAddr) {
 		socklen_t addr_len = sizeof src_addr;
 		socklen_t addr_lenIP = sizeof src_addrIP;
 
+        // Recieve messages from the IP socket created.
 		nIP = recvfrom(sockIP, bufferIP, 2048, MSG_DONTWAIT,
 				(struct sockaddr*) &src_addrIP, &addr_lenIP);
 
+        // if no messages are available in the IP socket.
 		if (nIP == -1) {
 			flagIP = 1;
 		}
 
+        // if some messages are available in the IP socket.
 		if (flagIP == 0) {
 
 			unsigned int tcIP = src_addrIP.sll_ifindex;
@@ -505,14 +539,16 @@ int _get_MACTest(struct addr_tuple *myAddr, int numTierAddr) {
 
 		}
 
+        // Receive messages from the control socket.
 		n = recvfrom(sock, buffer, 2048, MSG_DONTWAIT,
 				(struct sockaddr*) &src_addr, &addr_len);
-		if (n == -1) {
 
+        if (n == -1) {
+            printf("\n No messages in the control socket. Time out!");
 			flag = 1;
-
 		}
 
+        // if some message is present in the control socket.
 		if (flag == 0) {
 
 			unsigned int tc = src_addr.sll_ifindex;
@@ -543,7 +579,18 @@ int _get_MACTest(struct addr_tuple *myAddr, int numTierAddr) {
 				uint8_t checkMSGType = (ethhead[14]);
 				
 				// printf("\n%s : checkMSGType=%d\n",__FUNCTION__,checkMSGType);
-				if (checkMSGType == 1) {
+
+                // Checking for different type of MNLR messages
+                // 0x01 = Hello Message
+                // 0x02 = Encapsulated IP Message
+                // 0x05 = IP to Tier Address Mappping message
+
+                // Below ones are the newly added ones for auto naming.
+                // 0x06 = Join request message
+                // 0x07 = Labels available message
+                // 0x08 = Labels accepted message
+
+                if (checkMSGType == 1) {
 					//printf("\n");
 					//printf("MPLR Ctrl Message received \n");
 					MPLRCtrlReceivedCount++;
@@ -622,7 +669,7 @@ int _get_MACTest(struct addr_tuple *myAddr, int numTierAddr) {
 					// (below line) to be implemented properly
 					//printMPLRPacketDetails(abc,xyz);
 
-			//		printf("Printing full MPLR Data packet \n");
+			//		prinfdtf("Printing full MPLR Data packet \n");
 
 					int j = 0;
 					for (; j < n - 14; j++) {
@@ -909,6 +956,17 @@ int _get_MACTest(struct addr_tuple *myAddr, int numTierAddr) {
 
 				}	// MSG type 5 closed
 
+                if (checkMSGType == MESSAGE_TYPE_JOIN) {
+                    printf("\n Recieved MESSAGE_TYPE_JOIN ");
+                    sleep(1);
+
+                }
+
+                if(checkMSGType == MESSAGE_TYPE_AUTOLABEL){
+                    printf("\n Recieved join request! ");
+
+                }
+
 			}
 		}
 	}
@@ -1044,249 +1102,202 @@ int main(int argc, char **argv) {
 	char *ipAddress[16];
 	int cidrs[100] = { 0 };
 	char *portName[10];
-
-	int tierAddrCount = 0;
 	int endNWCount = 0;
-
 	int numActiveEndIPs = 0;
 	struct in_addr ips[100];
-
 	boolean tierSpecial = false;
 
-	//system("sudo service ntp restart");
+	// RVP For Logging purpose
+	char* filename = "./testLogs.txt";
+	fptr = fopen(filename,"w");
+	if(enableLogsFile) fprintf(fptr," Writing logs to file ... ");
+	fflush(fptr); 
+
+	// Checking for the validity of the arguments
+	// Previous - 	sudo ./run -T 2.1.2 -N 0 10.10.5.2 24 eth3
+	// Next - 	Root - 	sudo ./run -L 1 -T 1.1 -N 1
+	// Next - 	Root - 	sudo ./run -L 2 -N 0 10.10.5.2 24 eth3
+
 
 	if (argc > 1) {
 
 		argc--;
 		argv++;
-
 		while (argc > 0) {
-
 			char *opt = argv[0];
-
 			if (opt[0] != '-') {
-
 				break;
 			}
-
 			opt = argv[0];
-
-			// Checking for -T
-			if (strcmp(opt, "-T") == 0) {
-
+            printf("\n OPT = %s",opt);
+			// Checking for -L
+			if (strcmp(opt, "-L") == 0) {
 				argc--;
 				argv++;
-
-				//printf("-T Detected \n");
-				int initA = 0;
-
-				do {
-
-					char *next = argv[0];
-
-					//printf("Before : %s  \n", next);
-
-					if (next[0] == '-') {
-						break;
-					}
-
-					/* For Default tier address */
-					if (tierSpecial == false) {
-
-						setTierInfo(next);
-						tierSpecial = true;
-
-					}
-
-					//printf("Tier Address : %s  \n", next);
-
-					// pass it to tier address list
-					insertTierAddr(next);
-
-					tierAddr[initA] = malloc(1 + strlen(next));
-					strcpy(tierAddr[initA], next);
-
-					initA++;
-					tierAddrCount++;
-
-					argc--;
-					argv++;
-
-				} while (argc > 0);
-
+				myTierValue = convertStringToInteger(argv[0]);
+				argc--;
+				argv++;
+			}
+			else{
+				printf(" Error : Invalid Argument , Tier Value is not passed ");
+				exit(0);
 			}
 
-			// Checking for -N
+			printf("\n My Tier Value = %d", myTierValue);
+			fprintf(fptr,"\n My Tier Value = %d", myTierValue);
+			
+			// Checking only if the current node belongs to Tier 1 
+			// All other nodes will be named automatically based on the Tier 1 node.
+			// Below code tries to get all the multiple address of the nodes and add it into a list.
+			// One if the  address is set as the default or the special address.
+
+			if(myTierValue == 1)
+			{
+                opt = argv[0];
+				// Checking for -T
+				if (strcmp(opt, "-T") == 0) {
+					argc--;
+					argv++;
+					int initA = 0;
+					do {
+						char *next = argv[0];
+						if (next[0] == '-') {
+							break;
+						}
+						/* For Default tier address */
+						if (tierSpecial == false) {
+							setTierInfo(next);
+							tierSpecial = true;
+						}
+						// pass it to tier address list
+						insertTierAddr(next);
+						tierAddr[initA] = malloc(1 + strlen(next));
+						strcpy(tierAddr[initA], next);
+						initA++;
+						tierAddrCount++;
+						argc--;
+						argv++;
+					} while (argc > 0);
+				}
+			}
+			
+			// Checking whether the node is an edge node or an intermediate node.
+			// Adding the interface and the edge node IP to the local lists.
+
 			if (argc > 0) {
 				opt = argv[0];
-
 				if (strcmp(opt, "-N") == 0) {
-
 					argc--;
 					argv++;
-
 					//printf("-N Detected \n");
-
 					int edgeNode = atoi(argv[0]);
 					int initB = 0;
-
 					argc--;
 					argv++;
-
 					if (edgeNode == 0) {
-
 						// Edge Node
-
 						endNode = 0;
 						int iterationNCount = 0;
-
 						do {
-
 							char *nextN = argv[0];
-
 							//printf("Before : %s  \n", nextN);
-
 							if (nextN[0] == '-') {
-
 								if (iterationNCount == 0) {
-
 									totalIPError++;
 									//printf("ERROR: \n");
 								}
-
 								break;
 							}
-
-							//printf("IP Address : %s  \n", nextN);
-
+							
 							// pass it to other - IP
 							ipAddress[initB] = malloc(1 + strlen(nextN));
 							strcpy(ipAddress[initB], nextN);
-
 							argc--;
 							argv++;
 
 							char *nextN2 = argv[0];
-
 							//printf("Before : %s  \n", nextN2);
-
 							if (nextN2[0] == '-') {
-
 								totalIPError++;
 								//printf("ERROR: \n");
 								break;
 							}
 
 							//printf("CIDR : %s  \n", nextN2);
-
 							// pass it to other - CIDR
 							cidrs[initB] = atoi(nextN2);
-
 							argc--;
 							argv++;
 
 							char *nextN3 = argv[0];
-
 							//printf("Before : %s  \n", nextN3);
-
 							if (nextN3[0] == '-') {
-
 								totalIPError++;
 								//printf("ERROR: \n");
 								break;
 							}
 
 							//printf("Port Name : %s  \n", nextN3);
-
 							// pass it to other - Port name
 							portName[initB] = malloc(1 + strlen(nextN3));
 							strcpy(portName[initB], nextN3);
-
 							initB++;
 							endNWCount++;
-
 							argc--;
 							argv++;
-
 							iterationNCount++;
-
 						} while (argc > 0);
-
 					}
-
 					else {
-
 						//  skip till '-' encountered
-
 						while (argc > 0) {
-
 							char *skipNext = argv[0];
-
 							//printf("Skipping: %s  \n", skipNext);
-
 							if (skipNext[0] == '-') {
 								break;
 							}
-
 							argc--;
 							argv++;
-
 						}
-
 					}
 				}
-
 			}
 
 			// Checking for -V
 			if (argc > 0) {
-
 				opt = argv[0];
-
 				if ((strcmp(opt, "-V") == 0)
 						|| (strcmp(opt, "-version") == 0)) {
-
 					argc--;
 					argv++;
-
 					//printf("-V Detected \n");
-
 				}
 			}
 
 			if (argc > 0) {
-
 				opt = argv[0];
-
 				if (!(strcmp(opt, "-V") == 0) && !(strcmp(opt, "-version") == 0)
-
 				&& !(strcmp(opt, "-T") == 0)
-
-				&& !(strcmp(opt, "-N") == 0)
-
-				) {
-
+				&& !(strcmp(opt, "-N") == 0)) 
+				{
 					argc--;
 					argv++;
-
 					totalIPError++;
-
 					//printf("ERROR: Invalid parameter \n");
-
 				}
 			}
 
 		}
 	} else {
-
 		totalIPError++;
-		//printf("ERROR: Not enough parameters \n");
-
+		printf("ERROR: Not enough parameters \n");
+		exit(0);
 	}
-
 	finalARGCValue = argc;
 
 	// Copy Pranav's assignment here
+	// Converting IP$ or IPV6 addresses from text to binary format.
+	// Doing it for all the edge IP addresses.
 
 	int z = 0;
 	for (z = 0; z < endNWCount; z++) {
@@ -1297,7 +1308,16 @@ int main(int argc, char **argv) {
 		ips[z].s_addr = htonl(ips[z].s_addr);
 	}
 
+    if(myTierValue != 1) {
+        setInterfaces();
+        getMyTierAddresses();
+    }
+
+
 	// if only end node then advertise updates, i.e. put entrie TierAdd<->IPaddtable
+	// Table -> myAddr
+	// Tier address , IP address 
+	// 
 	if (endNode == 0) {
 		struct addr_tuple myAddr[endNWCount * (tierAddrCount)];
 		//printf("T0->%d ->%d\n", endNWCount, tierAddrCount);
@@ -1329,6 +1349,8 @@ int main(int argc, char **argv) {
 			}
 		}
 
+		// Populate the address table.
+		// Can be written as a function.
 		int i = 0;
 		for (i = 0; i < tierAddrCount; i++) {
 			struct addr_tuple *a = (struct addr_tuple*) calloc(1,
@@ -1382,6 +1404,8 @@ int freqCount(char str[], char search) {
 
 	return count;
 }
+
+// Function just to print the details based on the signal.
 
 void signal_callbackZ_handler(int signum) {
 
@@ -1645,4 +1669,111 @@ bool isInterfaceActive(struct in_addr ip, int cidr) {
 }
 
 
+int convertStringToInteger(char* num)
+{
+	int result=0,i=0;
+	int len = strlen(num);
+	for(i=0; i<len; i++){
+		result = result * 10 + ( num[i] - '0' );
+	}
+	//printf("%d", result);
+	return result;
+}
+
+void getMyTierAddresses()
+{
+    printf("\n Entering %s",__FUNCTION__);
+
+    // Creating a socket here for auto addressing and related variables.
+    int sock;
+    struct sockaddr_ll src_addr;
+    socklen_t addr_len = sizeof src_addr;
+    char buffer[2048];
+    unsigned char *ethhead = NULL;
+    int n;
+
+
+    // Creating the MNLR CONTROL SOCKET HERE
+    if ((sock = socket(AF_PACKET, SOCK_RAW, htons(0x8850))) < 0) {
+        printf("\nERROR: MNLR Socket ");
+    }
+    printf("\n Created a socket for auto address label! ");
+
+    // Checking whether label is set or not
+    // If not set, will wait here till the label is set
+
+	while(!recvdLabel)
+	{
+        int i =0;
+        // Form the NULL join message here
+        char labelAssignmentPayLoad[200];
+        int cplength = 0;
+        // Clearing the payload
+        memset(labelAssignmentPayLoad,'\0', 200);
+
+        // Setting the ctrlMessageType
+        uint8_t messageType = (uint8_t) MESSAGE_TYPE_JOIN;
+        memcpy(labelAssignmentPayLoad+cplength, &messageType, 1);
+
+        cplength++;
+
+        // Setting the tierValue
+        uint8_t tierValue = (uint8_t) myTierValue;
+        memcpy(labelAssignmentPayLoad+cplength, &tierValue, 1);
+
+        // Wait for 5 seconds
+        sleep(5);
+
+        printf("\n Sending NULL join request to all its interfaces, "
+                       "interfaceListSize = %d payloadSize=%d",interfaceListSize,(int)strlen(labelAssignmentPayLoad));
+        // Send NULL Join Message (Message Type, Tier Value) to all other nodes
+        for (i =0;i < interfaceListSize; i++) {
+            ctrlSend(interfaceList[i], labelAssignmentPayLoad);
+        }
+
+        // wait for addresses for some time
+        n = recvfrom(sock, buffer, 2048, MSG_DONTWAIT,
+                     (struct sockaddr*) &src_addr, &addr_len);
+        if (n == -1) {
+            printf("\n Timeout");
+        }
+        else{
+
+            //Check the message Type, if auto label message accept. else reject
+            if(0) // Modify this
+            {
+                ethhead = (unsigned char *) buffer;
+
+                if (ethhead == NULL) {
+                    printf("\n AutoLabel recieved message is empty");
+                }
+                else{
+                    // Add timeout for wait
+                    // Get the addresses
+                    // Add it to the local table
+                    // Send the LABELS accepted update to the node from which it got the message
+                    // Break the loop,when you get labels from at-least two different nodes */
+                    recvdLabel = true;
+                }
+            }
+        }
+	}
+
+    shutdown(sock,2);
+    printf("\n Exiting %s",__FUNCTION__);
+}
+
+
+char* generateNextChildAddress(){
+
+
+}
+
+void sendAvailableLabels(){
+// keep a child count
+// create new addresses 
+// Send upto 3 addresses to a single node.
+// Send the message as labels available.
+
+}
 

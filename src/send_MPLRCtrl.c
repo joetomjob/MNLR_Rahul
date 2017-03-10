@@ -33,6 +33,8 @@ int ctrlSend(char etherPort[], char inPayload[]) {
 	uint8_t header[HEADER_SIZE];
 	char temp_Payload[MAX_CTRL_PAYLD_SIZE];
 
+//    printf("\n ctrlSend : EtherPort = %s",etherPort);
+
 	//  Need to update
 	//	if (strlen(argv[2]) > 1000) {
 	//	memcpy(temp_Payload, argv[2], MAX_PAYLD_SIZE);
@@ -44,14 +46,14 @@ int ctrlSend(char etherPort[], char inPayload[]) {
 	payLoad_Size = strlen(temp_Payload);
 	frame_Size = HEADER_SIZE + 1 + payLoad_Size;
 
-	//printf("TEST: ctrl frame size %d\n", frame_Size);
+//	printf("\n TEST: ctrl frame size %d\n", frame_Size);
 
 	char payLoad[payLoad_Size];
 	memset(payLoad, '\0', payLoad_Size);
 	memcpy(payLoad, temp_Payload, payLoad_Size);
 
-	//printf("TEST: Payload size is %d\n ", payLoad_Size);
-	//printf("TEST: Frame size is %d\n ", frame_Size);
+//	printf("\n TEST: Payload size is %d\n ", payLoad_Size);
+//	printf("\n TEST: Frame size is %d\n ", frame_Size);
 
 	// creating frame
 	uint8_t frame[frame_Size];
@@ -63,18 +65,23 @@ int ctrlSend(char etherPort[], char inPayload[]) {
 	// Open RAW socket to send on
 	if ((sockfd = socket(AF_PACKET, SOCK_RAW, IPPROTO_RAW)) == -1) {
 		perror("ERROR: Socket Error");
+		printf("\n ERROR: Socket Error");
+
 	}
 
 	memset(&if_idx, 0, sizeof(struct ifreq));
 	strncpy(if_idx.ifr_name, ifName, IFNAMSIZ - 1);
-	if (ioctl(sockfd, SIOCGIFINDEX, &if_idx) < 0)
+	if (ioctl(sockfd, SIOCGIFINDEX, &if_idx) < 0) {
 		perror("ERROR: SIOCGIFINDEX - Misprint Compatibility");
+		printf("\n ERROR: SIOCGIFINDEX - Misprint Compatibility");
+	}
 
 	memset(&if_mac, 0, sizeof(struct ifreq));
 	strncpy(if_mac.ifr_name, ifName, IFNAMSIZ - 1);
-	if (ioctl(sockfd, SIOCGIFHWADDR, &if_mac) < 0)
-		perror(
-				"ERROR: SIOCGIFHWADDR - Either interface is not correct or disconnected");
+	if (ioctl(sockfd, SIOCGIFHWADDR, &if_mac) < 0) {
+		perror("ERROR: SIOCGIFHWADDR - Either interface is not correct or disconnected");
+		printf("\n ERROR: SIOCGIFHWADDR - Either interface is not correct or disconnected");
+	}
 
 	// Initializing the Ethernet Header
 	memset(header, 0, HEADER_SIZE);
@@ -151,11 +158,11 @@ int ctrlSend(char etherPort[], char inPayload[]) {
 	 */
 
 
-	//printf("TEST: Before sendto() - send_MPLRCtrl.c \n");
+//	printf("TEST: Before sendto() - send_MPLRCtrl.c \n");
 	// Send packet
 	if (sendto(sockfd, frame, tx_len + 1 + payLoad_Size, 0,
 			(struct sockaddr*) &socket_address, sizeof(struct sockaddr_ll)) < 0)
-		printf("ERROR: Send failed\n");
+		printf("\n ERROR: Send failed\n");
 
 	close(sockfd);
 	return 0;

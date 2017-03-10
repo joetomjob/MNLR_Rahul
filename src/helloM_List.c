@@ -63,6 +63,7 @@ extern int isFWDFieldsSet();
 extern int isEnvSet();
 extern int isTierSet();
 extern int setTierInfo(char tierValue[]);
+extern char* getTierInfo();
 extern int setControlIF();
 
 extern void printIPPacketDetails(unsigned char ipPacket[], int nIPSize);
@@ -109,15 +110,11 @@ bool recvdLabel = false;
 
 struct labels{
     char label[10];
-    label*  next;
+    struct labels *next;
 };
 
 // The labels allocated to each child node.
-labels allocatedLabels = null;
-
-// The label pool which contains the list of available child labels
-// in case if some node rejects a label.
-labels labelPool = null;
+struct labels *allocatedLabels = NULL;
 
 // To keep the track of the children to give new names.
 int myChildCount = 0;
@@ -135,6 +132,7 @@ void printInputStats();
 
 int setInterfaces();
 int freeInterfaces();
+struct labels generateChildLabel(char* myEtherPort, int childTier);
 
 /**
  * _get_MACTest(int,char[])
@@ -544,7 +542,7 @@ int _get_MACTest(struct addr_tuple *myAddr, int numTierAddr) {
 				(struct sockaddr*) &src_addr, &addr_len);
 
         if (n == -1) {
-            printf("\n No messages in the control socket. Time out!");
+            //printf("\n No messages in the control socket. Time out!");
 			flag = 1;
 		}
 
@@ -554,6 +552,8 @@ int _get_MACTest(struct addr_tuple *myAddr, int numTierAddr) {
 			unsigned int tc = src_addr.sll_ifindex;
 
 			if_indextoname(tc, recvOnEtherPort);
+
+            printf("\n Control message recvd from %s",recvOnEtherPort);
 
 			ethhead = (unsigned char *) buffer;
 
@@ -622,6 +622,7 @@ int _get_MACTest(struct addr_tuple *myAddr, int numTierAddr) {
 						int isNewPort = 0;
 
 						isNewPort = insert(tierAddrTemp, recvOnEtherPort);
+//                        printf("\n CHeck - recvOnEtherPort=%s",recvOnEtherPort);
 
 						if (z == 0) {
 
@@ -639,6 +640,7 @@ int _get_MACTest(struct addr_tuple *myAddr, int numTierAddr) {
 								if (mplrPayloadLen) {
 									endNetworkSend(recvOnEtherPort, mplrPayload,
 											mplrPayloadLen);
+//                                    printf("\n CHeck - recvOnEtherPort=%s",recvOnEtherPort);
 								}
 								free(mplrPayload);
 							}
@@ -956,14 +958,59 @@ int _get_MACTest(struct addr_tuple *myAddr, int numTierAddr) {
 
 				}	// MSG type 5 closed
 
+              //  printf("\n CHeckL - recvOnEtherPort=%s",recvOnEtherPort);
+
                 if (checkMSGType == MESSAGE_TYPE_JOIN) {
                     printf("\n Recieved MESSAGE_TYPE_JOIN ");
-                    sleep(1);
+                    //sleep(1);
+                    // check for the tierValue.
+                    // if the tierValue is < my TierValue , ignore the message
+                    // else
+                    // generate the label based on the interface it recived the message from
+                    // Send the label to the node
+                    // Should get a label accepted message in return
 
-                }
+                    uint8_t tierValueRequestedNode =  ethhead[16];
+                    printf("\n myTierValue = %d ",myTierValue);
+                    printf("\n tierValueRequestedNode = %d ",tierValueRequestedNode);
+                    if(myTierValue < tierValueRequestedNode){
+                        printf("\n MESSAGE_TYPE_JOIN request recvd from a node at lower tier ");
 
-                if(checkMSGType == MESSAGE_TYPE_AUTOLABEL){
-                    printf("\n Recieved join request! ");
+                        printf("\n Generating the label for the node");
+                        printf("\n Interface from which the request recvd = %s",recvOnEtherPort);
+
+                        struct labels labelList = generateChildLabel(recvOnEtherPort,tierValueRequestedNode);
+
+                        //Send this labelList to recvOnEtherPort
+
+                        // Generate the payload for sending this message.
+
+                        // Form the NULL join message here
+                        char labelAssignmentPayLoad[200];
+                        int cplength = 0;
+                        // Clearing the payload
+                        memset(labelAssignmentPayLoad,'\0', 200);
+
+                        // Setting the ctrlMessageType
+                        uint8_t messageType = (uint8_t) MESSAGE_TYPE_LABELS_AVAILABLE;
+                        memcpy(labelAssignmentPayLoad+cplength, &messageType, 1);
+
+                        cplength++;
+
+                        // Setting the number of labels being send
+                        uint8_t numberOfLabels = (uint8_t) 1; // Need to modify
+                        memcpy(labelAssignmentPayLoad+cplength, &numberOfLabels, 1);
+                        cplength++;
+
+                        // Setting the labels being send
+                        // Need to modify
+                        memcpy(labelAssignmentPayLoad+cplength,labelList.label , 1);
+
+                        printf("\n Sending MESSAGE_TYPE_LABELS_AVAILABLE  to all the interface, "
+                                       "interfaceListSize = %d payloadSize=%d",interfaceListSize,(int)strlen(labelAssignmentPayLoad));
+                        // Send MESSAGE_TYPE_LABELS_AVAILABLE  (Message Type, Tier Value) to all other nodes
+                        ctrlSend(recvOnEtherPort, labelAssignmentPayLoad);
+                    }
 
                 }
 
@@ -1722,7 +1769,7 @@ void getMyTierAddresses()
         memcpy(labelAssignmentPayLoad+cplength, &tierValue, 1);
 
         // Wait for 5 seconds
-        sleep(5);
+        sleep(2);
 
         printf("\n Sending NULL join request to all its interfaces, "
                        "interfaceListSize = %d payloadSize=%d",interfaceListSize,(int)strlen(labelAssignmentPayLoad));
@@ -1756,6 +1803,8 @@ void getMyTierAddresses()
                     recvdLabel = true;
                 }
             }
+
+
         }
 	}
 
@@ -1764,8 +1813,48 @@ void getMyTierAddresses()
 }
 
 
-char* generateNextChildAddress(){
+struct labels generateChildLabel(char* myEtherPort, int childTier){
 
+    printf("\n\n Inside %s",__FUNCTION__);
+    printf("\n Child port = %s",myEtherPort);
+    char* myTierAddress = getTierInfo();
+    printf("\n My TierAddress = %s",myTierAddress);
+
+    // Creating the label for the child here
+    char childLabel[10];
+    memset(childLabel,'\0',10);
+    sprintf(childLabel, "%d", childTier);
+
+    //Getting the UID of the label of hte current address.
+
+    int i = 0;
+    while(myTierAddress[i] != '.'){
+        i++;
+    }
+
+    int curLengthChildLabel = strlen(childLabel);
+    strcpy(childLabel+curLengthChildLabel, myTierAddress+i);
+
+    printf("\n After appending the uid of the parent, childLabel = %s ",childLabel);
+
+
+    char temp[10] = ".";
+    strcpy(temp+1,myEtherPort+3);
+    printf("\n temp = %s",temp);
+
+    curLengthChildLabel = strlen(childLabel);
+    strcpy(childLabel+curLengthChildLabel, temp);
+
+    printf("\n After appending the port ID, ChildLabel = %s",childLabel);
+    printf("\n Exit: %s",__FUNCTION__);
+
+    //Adding it to a list and sending it out.
+
+    struct labels labelList;
+    strcpy(labelList.label,childLabel);
+    labelList.next = NULL;
+
+    return labelList;
 
 }
 

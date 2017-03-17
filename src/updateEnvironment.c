@@ -129,3 +129,7 @@ int setTierInfo(char tierValue[]) {
 	return 0;
 }
 
+char* getTierInfo() {
+	return tierAddress;
+}
+

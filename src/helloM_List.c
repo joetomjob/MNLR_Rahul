@@ -45,6 +45,8 @@
 
 
 extern int ctrlSend(char eth[], char pay[]);
+extern int ctrlLabelSend(int,char eth[], char pay[]);
+
 
 extern int dataSend(char etherPort[], unsigned char ipPacket[], char destTier[],
 		char srcTier[], int ipPacketSize);
@@ -147,7 +149,7 @@ struct labels generateChildLabel(char* myEtherPort, int childTier);
 
 int _get_MACTest(struct addr_tuple *myAddr, int numTierAddr) {
 
-	if(enableLogsFile) printf("\n MNLR started  ... \n");
+	if(enableLogsFile) printf("\n\n MNLR started  ... \n");
 
 	time_t time0 = time(0);
 	time_t time1;
@@ -228,6 +230,7 @@ int _get_MACTest(struct addr_tuple *myAddr, int numTierAddr) {
 	freeInterfaces();
 	interfaceListSize = 0;
 
+    printf("\n Processing messages now...\n");
     // Repeats the steps from now on
 	while (1) {
 
@@ -408,12 +411,13 @@ int _get_MACTest(struct addr_tuple *myAddr, int numTierAddr) {
 							printf("ERROR: End destination tier address not available \n");
 						}
 
+                        printf("\n Calling packetForwardAlgorithm linenumber =%d",__LINE__);
 						packetFwdStatus = packetForwardAlgorithm(tierAddress,
 								tierDest);
 
 					} else {
 						printf("ERROR: Tier info was not set \n");
-
+                        printf("\n Calling packetForwardAlgorithm linenumber =%d",__LINE__);
 						packetFwdStatus = packetForwardAlgorithm(tierAddress,
 								tierDest);
 
@@ -495,13 +499,13 @@ int _get_MACTest(struct addr_tuple *myAddr, int numTierAddr) {
 						errorCount++;
 						printf("ERROR: End destination tier address not available \n");
 					}
-
+                    printf("\n Calling packetForwardAlgorithm linenumber =%d",__LINE__);
 					packetFwdStatus = packetForwardAlgorithm(tierAddress,
 							tierDest);
 
 				} else {
 					printf("ERROR: Tier info was not set\n");
-
+                    printf("\n Calling packetForwardAlgorithm linenumber =%d",__LINE__);
 					packetFwdStatus = packetForwardAlgorithm(tierAddress,
 							tierDest);
 
@@ -559,26 +563,26 @@ int _get_MACTest(struct addr_tuple *myAddr, int numTierAddr) {
 
 			if (ethhead != NULL) {
 
-				// printf("\n--------------------------------------"
-				// 	"\n   MAC Destination : "
-				// 		"%02x:%02x:%02x:%02x:%02x:%02x\n", ethhead[0],
-				// 		ethhead[1], ethhead[2], ethhead[3], ethhead[4],
-				// 		ethhead[5]);
+				 printf("\n--------------------------------------"
+				 	"\n   MAC Destination : "
+				 		"%02x:%02x:%02x:%02x:%02x:%02x\n", ethhead[0],
+				 		ethhead[1], ethhead[2], ethhead[3], ethhead[4],
+				 		ethhead[5]);
 
-				// printf("        MAC Origin : "
-				// 		"%02x:%02x:%02x:%02x:%02x:%02x\n", ethhead[6],
-				// 		ethhead[7], ethhead[8], ethhead[9], ethhead[10],
-				// 		ethhead[11]);
-				// printf("              Type : %02x:%02x \n", ethhead[12],
-				// 		ethhead[13]);
-				// printf("               MSG : %d \n", ethhead[14]);
-				// printf("\n");
+				 printf("        MAC Origin : "
+				 		"%02x:%02x:%02x:%02x:%02x:%02x\n", ethhead[6],
+				 		ethhead[7], ethhead[8], ethhead[9], ethhead[10],
+				 		ethhead[11]);
+				 printf("              Type : %02x:%02x \n", ethhead[12],
+				 		ethhead[13]);
+				 printf("               MSG : %d \n", ethhead[14]);
+				 printf("\n");
 
 				MPLROtherReceivedCount++;
 
 				uint8_t checkMSGType = (ethhead[14]);
 				
-				// printf("\n%s : checkMSGType=%d\n",__FUNCTION__,checkMSGType);
+				printf("\n%s : checkMSGType=%d\n",__FUNCTION__,checkMSGType);
 
                 // Checking for different type of MNLR messages
                 // 0x01 = Hello Message
@@ -591,66 +595,74 @@ int _get_MACTest(struct addr_tuple *myAddr, int numTierAddr) {
                 // 0x08 = Labels accepted message
 
                 if (checkMSGType == 1) {
-					//printf("\n");
-					//printf("MPLR Ctrl Message received \n");
-					MPLRCtrlReceivedCount++;
-					MPLROtherReceivedCount--;
 
-					int tierAddrTotal = (ethhead[15]);
+                    int checksubMSGType = (ethhead[15]);
 
-					//printf("  No. of Tier Addr : %d\n", tierAddrTotal);
+                    //printf("\n checksubMSGType= %d",checksubMSGType);
 
-					//Print multiple tier address based on length
-					int lengthIndex = 16;
-					int z = 0;
 
-					for (; z < tierAddrTotal; z++) {
 
-						int lengthOfTierAddrTemp = 0;
-						lengthOfTierAddrTemp = (ethhead[lengthIndex]);
-						//printf("            Length : %d \n",
-						//		lengthOfTierAddrTemp);
+                        //printf("\n");
+                        //printf("MPLR Ctrl Message received \n");
+                        MPLRCtrlReceivedCount++;
+                        MPLROtherReceivedCount--;
 
-						unsigned char tierAddrTemp[lengthOfTierAddrTemp];
-						memset(tierAddrTemp, '\0', lengthOfTierAddrTemp);
-						lengthIndex = lengthIndex + 1;
-						memcpy(tierAddrTemp, &ethhead[lengthIndex],
-								lengthOfTierAddrTemp);
-						lengthIndex = lengthIndex + lengthOfTierAddrTemp;
+                        int tierAddrTotal = (ethhead[15]);
 
-						//printf("              Data : %s\n", tierAddrTemp);
-						int isNewPort = 0;
+                        //printf("  No. of Tier Addr : %d\n", tierAddrTotal);
 
-						isNewPort = insert(tierAddrTemp, recvOnEtherPort);
-//                        printf("\n CHeck - recvOnEtherPort=%s",recvOnEtherPort);
+                        //Print multiple tier address based on length
+                        int lengthIndex = 16;
+                        int z = 0;
 
-						if (z == 0) {
+                        for (; z < tierAddrTotal; z++) {
 
-							// the instant we know there is new port we start advertising our tierAdd<->IP table.
-							if (isNewPort) {
+                            int lengthOfTierAddrTemp = 0;
+                            lengthOfTierAddrTemp = (ethhead[lengthIndex]);
+                            //printf("            Length : %d \n",
+                            //		lengthOfTierAddrTemp);
 
-								// If new port we have to advertise our tierAdd<->IPAdd table.
-								uint8_t *mplrPayload = allocate_ustrmem(
-										IP_MAXPACKET);
-								int mplrPayloadLen = 0;
+                            unsigned char tierAddrTemp[lengthOfTierAddrTemp];
+                            memset(tierAddrTemp, '\0', lengthOfTierAddrTemp);
+                            lengthIndex = lengthIndex + 1;
+                            memcpy(tierAddrTemp, &ethhead[lengthIndex],
+                                   lengthOfTierAddrTemp);
+                            lengthIndex = lengthIndex + lengthOfTierAddrTemp;
 
-								mplrPayloadLen = buildPayload(mplrPayload,
-								COMPLETE_TABLE, 0);
+                            //printf("              Data : %s\n", tierAddrTemp);
+                            int isNewPort = 0;
 
-								if (mplrPayloadLen) {
-									endNetworkSend(recvOnEtherPort, mplrPayload,
-											mplrPayloadLen);
-//                                    printf("\n CHeck - recvOnEtherPort=%s",recvOnEtherPort);
-								}
-								free(mplrPayload);
-							}
+                            isNewPort = insert(tierAddrTemp, recvOnEtherPort);
+                            //                        printf("\n CHeck - recvOnEtherPort=%s",recvOnEtherPort);
 
-						}
+                            if (z == 0) {
 
-					}
+                                // the instant we know there is new port we start advertising our tierAdd<->IP table.
+                                if (isNewPort) {
 
-					unsigned char *ethhead2;
-					ethhead2 = (unsigned char *) (ethhead + 6);
+                                    // If new port we have to advertise our tierAdd<->IPAdd table.
+                                    uint8_t *mplrPayload = allocate_ustrmem(
+                                            IP_MAXPACKET);
+                                    int mplrPayloadLen = 0;
+
+                                    mplrPayloadLen = buildPayload(mplrPayload,
+                                                                  COMPLETE_TABLE, 0);
+
+                                    if (mplrPayloadLen) {
+                                        endNetworkSend(recvOnEtherPort, mplrPayload,
+                                                       mplrPayloadLen);
+                                        //                                    printf("\n CHeck - recvOnEtherPort=%s",recvOnEtherPort);
+                                    }
+                                    free(mplrPayload);
+                                }
+
+                            }
+
+                        }
+
+                        unsigned char *ethhead2;
+                        ethhead2 = (unsigned char *) (ethhead + 6);
+
 
 					// printf(
 					// 		" MAC Origin Copied : %02x:%02x:%02x:%02x:%02x:%02x \n",
@@ -662,8 +674,7 @@ int _get_MACTest(struct addr_tuple *myAddr, int numTierAddr) {
 
 				if (checkMSGType == 2) {
 
-					//printf("\n");
-					// printf("TEST: MPLR Data Message received \n");
+					printf("\n MNLR Data Message received checkMSGType=%d\n",checkMSGType);
 					MPLRDataReceivedCount++;
 					MPLROtherReceivedCount--;
 
@@ -671,13 +682,12 @@ int _get_MACTest(struct addr_tuple *myAddr, int numTierAddr) {
 					// (below line) to be implemented properly
 					//printMPLRPacketDetails(abc,xyz);
 
-			//		prinfdtf("Printing full MPLR Data packet \n");
+					printf("Printing full MPLR Data packet \n");
 
 					int j = 0;
 					for (; j < n - 14; j++) {
-
-						//	Printing MPLR Data Packet
-			//			printf("MPLR Content : %d : %02x  \n", j,buffer[j] & 0xff);
+                        //	Printing MPLR Data Packet
+					   // printf("MPLR Content : %d : %02x  \n", j,buffer[j] & 0xff);
 					}
 
 					//printf("\n");
@@ -731,14 +741,14 @@ int _get_MACTest(struct addr_tuple *myAddr, int numTierAddr) {
 					int packetFwdStatus = -1;
 
 					if (isTierSet() == 0) {
-
+                        printf("\n Calling packetForwardAlgorithm linenumber =%d finalDest=%s",__LINE__,finalDes);
 						packetFwdStatus = packetForwardAlgorithm(tierAddress,
 								finalDes);
 
 					} else {
 						errorCount++;
 						//printf("ERROR: Tier info was not set \n");
-
+                        printf("\n Calling packetForwardAlgorithm linenumber =%d",__LINE__);
 						packetFwdStatus = packetForwardAlgorithm(tierAddress,
 								finalDes);
 
@@ -958,7 +968,6 @@ int _get_MACTest(struct addr_tuple *myAddr, int numTierAddr) {
 
 				}	// MSG type 5 closed
 
-              //  printf("\n CHeckL - recvOnEtherPort=%s",recvOnEtherPort);
 
                 if (checkMSGType == MESSAGE_TYPE_JOIN) {
                     printf("\n Recieved MESSAGE_TYPE_JOIN ");
@@ -970,16 +979,16 @@ int _get_MACTest(struct addr_tuple *myAddr, int numTierAddr) {
                     // Send the label to the node
                     // Should get a label accepted message in return
 
-                    uint8_t tierValueRequestedNode =  ethhead[16];
-                    printf("\n myTierValue = %d ",myTierValue);
-                    printf("\n tierValueRequestedNode = %d ",tierValueRequestedNode);
-                    if(myTierValue < tierValueRequestedNode){
+                    uint8_t tierValueRequestedNode = ethhead[15];
+                    printf("\n myTierValue = %d ", myTierValue);
+                    printf("\n tierValueRequestedNode = %d ", tierValueRequestedNode);
+                    if (myTierValue < tierValueRequestedNode) {
                         printf("\n MESSAGE_TYPE_JOIN request recvd from a node at lower tier ");
 
                         printf("\n Generating the label for the node");
-                        printf("\n Interface from which the request recvd = %s",recvOnEtherPort);
+                        printf("\n Interface from which the request recvd = %s", recvOnEtherPort);
 
-                        struct labels labelList = generateChildLabel(recvOnEtherPort,tierValueRequestedNode);
+                        struct labels labelList = generateChildLabel(recvOnEtherPort, tierValueRequestedNode);
 
                         //Send this labelList to recvOnEtherPort
 
@@ -989,34 +998,47 @@ int _get_MACTest(struct addr_tuple *myAddr, int numTierAddr) {
                         char labelAssignmentPayLoad[200];
                         int cplength = 0;
                         // Clearing the payload
-                        memset(labelAssignmentPayLoad,'\0', 200);
+                        memset(labelAssignmentPayLoad, '\0', 200);
 
                         // Setting the ctrlMessageType
-                        uint8_t messageType = (uint8_t) MESSAGE_TYPE_LABELS_AVAILABLE;
-                        memcpy(labelAssignmentPayLoad+cplength, &messageType, 1);
+/*                        uint8_t messageType = (uint8_t) MESSAGE_TYPE_LABELS_AVAILABLE;
+                        memcpy(labelAssignmentPayLoad + cplength, &messageType, 1);
 
                         cplength++;
-
+*/
                         // Setting the number of labels being send
                         uint8_t numberOfLabels = (uint8_t) 1; // Need to modify
-                        memcpy(labelAssignmentPayLoad+cplength, &numberOfLabels, 1);
+                        memcpy(labelAssignmentPayLoad + cplength, &numberOfLabels, 1);
+                        cplength++;
+
+                        // Setting the label length being send
+                        uint8_t labelLength = (uint8_t) strlen(labelList.label); // Need to modify
+                        memcpy(labelAssignmentPayLoad + cplength, &labelLength, 1);
                         cplength++;
 
                         // Setting the labels being send
                         // Need to modify
-                        memcpy(labelAssignmentPayLoad+cplength,labelList.label , 1);
+                        memcpy(labelAssignmentPayLoad + cplength, labelList.label, labelLength + 1);
 
                         printf("\n Sending MESSAGE_TYPE_LABELS_AVAILABLE  to all the interface, "
-                                       "interfaceListSize = %d payloadSize=%d",interfaceListSize,(int)strlen(labelAssignmentPayLoad));
+                                       "interfaceListSize = %d payloadSize=%d \n", interfaceListSize,
+                               (int) strlen(labelAssignmentPayLoad));
                         // Send MESSAGE_TYPE_LABELS_AVAILABLE  (Message Type, Tier Value) to all other nodes
-                        ctrlSend(recvOnEtherPort, labelAssignmentPayLoad);
+                        ctrlLabelSend(MESSAGE_TYPE_LABELS_AVAILABLE, recvOnEtherPort, labelAssignmentPayLoad);
                     }
-
                 }
 
-			}
-		}
-	}
+                if(checkMSGType == MESSAGE_TYPE_LABELS_ACCEPTED){
+                    printf("\n Recieved MESSAGE_TYPE_LABELS_ACCEPTED ");
+                    // To be done later
+                }
+
+              //  printf("\n CHeckL - recvOnEtherPort=%s",recvOnEtherPort);
+
+            }
+
+        }
+    }
 	return 0;
 }
 
@@ -1165,6 +1187,9 @@ int main(int argc, char **argv) {
 	// Next - 	Root - 	sudo ./run -L 1 -T 1.1 -N 1
 	// Next - 	Root - 	sudo ./run -L 2 -N 0 10.10.5.2 24 eth3
 
+    // to be deleted RVP
+   // printf("\n argv[0]= %s",argv[0] );
+
 
 	if (argc > 1) {
 
@@ -1206,6 +1231,8 @@ int main(int argc, char **argv) {
 					argc--;
 					argv++;
 					int initA = 0;
+
+                    // Loop to extract the multiple labels and then setting the first label as the default label.
 					do {
 						char *next = argv[0];
 						if (next[0] == '-') {
@@ -1357,7 +1384,7 @@ int main(int argc, char **argv) {
 
     if(myTierValue != 1) {
         setInterfaces();
-        getMyTierAddresses();
+        getMyTierAddresses(tierAddr);
     }
 
 
@@ -1727,7 +1754,7 @@ int convertStringToInteger(char* num)
 	return result;
 }
 
-void getMyTierAddresses()
+void getMyTierAddresses(char* tierAddr[])
 {
     printf("\n Entering %s",__FUNCTION__);
 
@@ -1738,6 +1765,7 @@ void getMyTierAddresses()
     char buffer[2048];
     unsigned char *ethhead = NULL;
     int n;
+    char recvOnEtherPort[5];
 
 
     // Creating the MNLR CONTROL SOCKET HERE
@@ -1758,12 +1786,12 @@ void getMyTierAddresses()
         // Clearing the payload
         memset(labelAssignmentPayLoad,'\0', 200);
 
-        // Setting the ctrlMessageType
+   /*     // Setting the ctrlMessageType
         uint8_t messageType = (uint8_t) MESSAGE_TYPE_JOIN;
         memcpy(labelAssignmentPayLoad+cplength, &messageType, 1);
 
         cplength++;
-
+ */
         // Setting the tierValue
         uint8_t tierValue = (uint8_t) myTierValue;
         memcpy(labelAssignmentPayLoad+cplength, &tierValue, 1);
@@ -1775,37 +1803,97 @@ void getMyTierAddresses()
                        "interfaceListSize = %d payloadSize=%d",interfaceListSize,(int)strlen(labelAssignmentPayLoad));
         // Send NULL Join Message (Message Type, Tier Value) to all other nodes
         for (i =0;i < interfaceListSize; i++) {
-            ctrlSend(interfaceList[i], labelAssignmentPayLoad);
+            ctrlLabelSend(MESSAGE_TYPE_JOIN,interfaceList[i], labelAssignmentPayLoad);
         }
 
+        printf("\n Waiting for MESSAGE_TYPE_LABELS_AVAILABLE messgae");
         // wait for addresses for some time
         n = recvfrom(sock, buffer, 2048, MSG_DONTWAIT,
                      (struct sockaddr*) &src_addr, &addr_len);
         if (n == -1) {
-            printf("\n Timeout");
+            printf("\n Timeout happened, NO MESSAGE_TYPE_LABELS_AVAILABLE\n");
         }
         else{
 
-            //Check the message Type, if auto label message accept. else reject
-            if(0) // Modify this
-            {
-                ethhead = (unsigned char *) buffer;
+            unsigned int tc = src_addr.sll_ifindex;
+            if_indextoname(tc, recvOnEtherPort);
+            printf("\n Control message recvd from %s \n",recvOnEtherPort);
+            ethhead = (unsigned char *) buffer;
 
-                if (ethhead == NULL) {
-                    printf("\n AutoLabel recieved message is empty");
-                }
-                else{
-                    // Add timeout for wait
-                    // Get the addresses
-                    // Add it to the local table
-                    // Send the LABELS accepted update to the node from which it got the message
-                    // Break the loop,when you get labels from at-least two different nodes */
-                    recvdLabel = true;
-                }
+
+            if (ethhead == NULL) {
+                printf("\n AutoLabel recieved message is empty \n");
             }
+            else{
 
 
+                uint8_t checkMSGType = (ethhead[14]);
+                printf("\n checkMSGType=%d \n",checkMSGType);
+
+                if(checkMSGType == MESSAGE_TYPE_LABELS_AVAILABLE) {
+
+                 //   checkMSGType = (ethhead[15]);
+                 //   printf("\n checkMSGType=%d \n",checkMSGType);
+
+                    if (checkMSGType == MESSAGE_TYPE_LABELS_AVAILABLE) {
+                        printf("\n Received MESSAGE_TYPE_LABELS_AVAILABLE \n");
+
+                        int numberLabels = ethhead[15];
+                        printf("\n Number of Labels available = %d", numberLabels);
+
+                        int labelLength = ethhead[16];
+                        printf("\n Label Length = %d", labelLength);
+
+                        char label[5];
+                        memcpy(label,ethhead+17,labelLength+1);
+                        printf("\n Label  = %s\n", label);
+
+                        recvdLabel = true;
+
+						//set the label here
+                        /* For Default tier address */
+                        setTierInfo(label);
+
+                        // pass it to tier address list
+                        insertTierAddr(label);
+
+                        tierAddr[0] = malloc(1 + strlen(label));
+                        strcpy(tierAddr[0], label);
+                        tierAddrCount++;
+
+
+                       // exit(1);
+                        // Generate Labels Accepted Message
+
+                        cplength = 0;
+                        // Clearing the payload
+                        memset(labelAssignmentPayLoad,'\0', 200);
+
+                        // Setting the ctrlMessageType
+ /*                       uint8_t messageType = (uint8_t) MESSAGE_TYPE_LABELS_ACCEPTED;
+                        memcpy(labelAssignmentPayLoad+cplength, &messageType, 1);
+
+                        cplength++;
+*/
+                        // Set tbe labels here .. TO be done
+                        //uint8_t tierValue = (uint8_t) myTierValue;
+                        //memcpy(labelAssignmentPayLoad+cplength, &tierValue, 1);
+
+                        // Sending labels accepted message
+                        ctrlLabelSend(MESSAGE_TYPE_LABELS_ACCEPTED,recvOnEtherPort, labelAssignmentPayLoad);
+
+
+                    }
+                }
+                // Add timeout for wait
+                // Get the addresses
+                // Add it to the local table
+                // Send the LABELS accepted update to the node from which it got the message
+                // Break the loop,when you get labels from at-least two different nodes */
+
+            }
         }
+
 	}
 
     shutdown(sock,2);
@@ -1846,7 +1934,7 @@ struct labels generateChildLabel(char* myEtherPort, int childTier){
     strcpy(childLabel+curLengthChildLabel, temp);
 
     printf("\n After appending the port ID, ChildLabel = %s",childLabel);
-    printf("\n Exit: %s",__FUNCTION__);
+
 
     //Adding it to a list and sending it out.
 
@@ -1854,6 +1942,7 @@ struct labels generateChildLabel(char* myEtherPort, int childTier){
     strcpy(labelList.label,childLabel);
     labelList.next = NULL;
 
+    printf("\n Exit: %s",__FUNCTION__);
     return labelList;
 
 }

@@ -43,9 +43,9 @@
 
 
 // Types newly added for auto assignment of labels
-#define MESSAGE_TYPE_JOIN  				1
-#define MESSAGE_TYPE_LABELS_AVAILABLE  	2
-#define MESSAGE_TYPE_LABELS_ACCEPTED  	3
+#define MESSAGE_TYPE_JOIN  				7
+#define MESSAGE_TYPE_LABELS_AVAILABLE  	8
+#define MESSAGE_TYPE_LABELS_ACCEPTED  	9
 
 #define MESSAGE_TYPE_ENDNW_ADD	1
 #define MESSAGE_TYPE_ENDNW_REMOVE	2

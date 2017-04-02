@@ -7,9 +7,7 @@ Here is the process that we use when we run the program.
 
 Format:
 
-sudo ./run -T 1 -L 1.1 -N 1
-
-programName  -T  <Tier Level>  -L  <Node Label> -N  < indicator  [ IP_addr1  CIDR1  Port1  …  IP_addrn CIDRn  Portn ] > 
+programName  -T  <Tier Level>     -L  <Node Label>     -N  < indicator  [ IP_addr1  CIDR1  Port1  …  IP_addrn CIDRn  Portn ] > 
 
 	Note:
 
@@ -26,12 +24,14 @@ All input validation is done. It will throw error if input is not proper
 input parameters can be specified in any order.  
             Example
 
-            ./MNLR  -T  1 -L 1.1  -N   1         			--> For nodes at Tier 1
-            ./MNLR  -T  2 -N  1  							--> For intermediate nodes at Tier n > 1
-            ./MNLR  -T  2 -N  0  10.1.1.1   24    eth2      --> For edge nodes at Tier n > 1    
+            ./MNLR  -T  1 -L 1.1  -N   1				--> For nodes at Tier 1
+            ./MNLR  -T  2 -N  1							--> For intermediate nodes at Tier n > 1
+            ./MNLR  -T  2 -N  0  10.1.1.1   24    eth2	--> For edge nodes at Tier n > 1    
 
 Note:
+
 	If you have source code and want to recompile it again you can use the below command
+
 	gcc  -o MNLR *.c -lm
 
 Examples:

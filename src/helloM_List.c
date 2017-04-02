@@ -135,7 +135,7 @@ int setInterfaces();
 int freeInterfaces();
 int generateChildLabel(char* myEtherPort, int childTier,struct labels** labelList);
 void addLabelsList(struct labels* labelList,char label[]);
-void getParentIdLabel(char myTierAddress[],char childLabel[],char myEtherPort[]);
+void joinChildTierParentUIDInterface(char childLabel[],char myTierAddress[],char myEtherPort[]);
 void printMyLabels();
 
 extern int myTotalTierAddress;
@@ -1008,14 +1008,7 @@ int _get_MACTest(struct addr_tuple *myAddr, int numTierAddr) {
                         // Clearing the payload
                         memset(labelAssignmentPayLoad, '\0', 200);
 
-                        // Setting the ctrlMessageType
-/*                        uint8_t messageType = (uint8_t) MESSAGE_TYPE_LABELS_AVAILABLE;
-                        memcpy(labelAssignmentPayLoad + cplength, &messageType, 1);
-
-                        cplength++;
-*/
                         printf("\n %s : Creating the payload to send the new labels %s\n",__FUNCTION__,labelList->label);
-
                         printf("\n %s : Setting the number of labels in the payload \n",__FUNCTION__);
                         // Setting the number of labels being send
                         uint8_t numberOfLabels = (uint8_t) numbNewLabels; // Need to modify
@@ -1327,7 +1320,7 @@ int main(int argc, char **argv) {
 			opt = argv[0];
             //printf("\n OPT = %s",opt);
 			// Checking for -L
-			if (strcmp(opt, "-L") == 0) {
+			if (strcmp(opt, "-T") == 0) {
 				argc--;
 				argv++;
 				myTierValue = convertStringToInteger(argv[0]);
@@ -1351,7 +1344,7 @@ int main(int argc, char **argv) {
 			{
                 opt = argv[0];
 				// Checking for -T
-				if (strcmp(opt, "-T") == 0) {
+				if (strcmp(opt, "-L") == 0) {
 					argc--;
 					argv++;
 					int initA = 0;
@@ -1866,6 +1859,13 @@ bool isInterfaceActive(struct in_addr ip, int cidr) {
         return false;
 }
 
+/**
+ * convertStringToInteger()
+ *
+ * Method which converts the passed string into integer.
+ *
+ * @return status (int) - method returns integer value of the string.
+ */
 
 int convertStringToInteger(char* num)
 {
@@ -1877,6 +1877,19 @@ int convertStringToInteger(char* num)
 	//printf("%d", result);
 	return result;
 }
+
+
+/**
+ * getMyTierAddresses()
+ *
+ * Method to obtain label for each node.
+ * The label is received from nodes in the higher level by sending the JOIN requests.
+ * The nodes at higher level will send a list of available labels which can be used by this node.
+ * It will accept all the labels and sends the LABELS_ACCEPTED message back to the node from which
+ * it recieved the labels.
+ *
+ * @return status (void) - method returns none.
+ */
 
 void getMyTierAddresses(char* tierAddr[])
 {
@@ -2059,15 +2072,15 @@ void getMyTierAddresses(char* tierAddr[])
     printf("\n Exiting %s",__FUNCTION__);
 }
 
+/**
+ * addLabelsList()
+ *
+ * Add the passed label to the passed list
+ *
+ * @return status (void) - method returns none.
+ */
+
 void addLabelsList(struct labels* labelList,char label[]){
-
-    /*
-     * struct labels{
-    char label[10];
-    struct labels *next;
-};
-
-     */
 
     printf("\nEnter %s, Label to be added : %s\n",__FUNCTION__,label);
     struct labels* newlabel = (struct labels*) malloc(sizeof(struct labels));
@@ -2089,6 +2102,14 @@ void addLabelsList(struct labels* labelList,char label[]){
     printf("\nExit %s",__FUNCTION__);
 }
 
+/**
+ * generateChildLabel()
+ *
+ * Generate the child labels with respect to all available labels for the current node.
+ * Joins the Tier Value of the child , UID of each parent label and the interface to which the parent is connected.
+ *
+ * @return status (int) - method return the number of labels created.
+ */
 
 int generateChildLabel(char* myEtherPort, int childTier, struct labels** labelList) {
 
@@ -2118,7 +2139,7 @@ int generateChildLabel(char* myEtherPort, int childTier, struct labels** labelLi
         memset(childLabel, '\0', 10);
         sprintf(childLabel, "%d", childTier);
         // Creating the child Label here
-        getParentIdLabel(temp->tier, childLabel, myEtherPort);
+        joinChildTierParentUIDInterface(childLabel, temp->tier, myEtherPort);
 
         struct labels* newLabel =  (struct labels*) malloc(sizeof(struct labels));
 
@@ -2137,8 +2158,15 @@ int generateChildLabel(char* myEtherPort, int childTier, struct labels** labelLi
 
 }
 
+/**
+ * joinChildTierParentUIDInterface()
+ *
+ * method to join the Tier Value of the child , UID of the parent and the interface to which the parent is connected.
+ *
+ * @return status (void) - method return none
+ */
 
-void getParentIdLabel(char myTierAddress[],char childLabel[], char myEtherPort[]){
+void joinChildTierParentUIDInterface(char childLabel[], char myTierAddress[],char myEtherPort[]){
     printf("\n My TierAddress = %s",myTierAddress);
     //Getting the UID of the label of hte current address.
     int i = 0;
@@ -2160,9 +2188,15 @@ void getParentIdLabel(char myTierAddress[],char childLabel[], char myEtherPort[]
 }
 
 
+/**
+ * printMyLabels()
+ *
+ * method to print my labels.
+ *
+ * @return status (void) - method return none
+ */
 
 void printMyLabels(){
-
 
     struct nodeTL *temp = headTL;
     printf("\n My labels are: ");
@@ -2170,7 +2204,5 @@ void printMyLabels(){
         printf(" %s ,",temp->tier);
         temp = temp->next;
     }
-
-
 }
 

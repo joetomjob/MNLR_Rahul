@@ -13,7 +13,6 @@
 #include <netinet/if_ether.h>
 #include <time.h>
 #include <arpa/inet.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -134,8 +133,11 @@ void printInputStats();
 
 int setInterfaces();
 int freeInterfaces();
-struct labels generateChildLabel(char* myEtherPort, int childTier);
+int generateChildLabel(char* myEtherPort, int childTier,struct labels** labelList);
+void addLabelsList(struct labels* labelList,char label[]);
+void getParentIdLabel(char myTierAddress[],char childLabel[],char myEtherPort[]);
 
+extern int myTotalTierAddress;
 /**
  * _get_MACTest(int,char[])
  *
@@ -988,8 +990,10 @@ int _get_MACTest(struct addr_tuple *myAddr, int numTierAddr) {
                         printf("\n Generating the label for the node");
                         printf("\n Interface from which the request recvd = %s", recvOnEtherPort);
 
-                        struct labels labelList = generateChildLabel(recvOnEtherPort, tierValueRequestedNode);
+                        struct labels* labelList;
 
+                        int numbNewLabels = generateChildLabel(recvOnEtherPort, tierValueRequestedNode, &labelList);
+                        printf("\n %s : Labels are generated\n",__FUNCTION__);
                         //Send this labelList to recvOnEtherPort
 
                         // Generate the payload for sending this message.
@@ -1006,19 +1010,25 @@ int _get_MACTest(struct addr_tuple *myAddr, int numTierAddr) {
 
                         cplength++;
 */
+                        printf("\n %s : Creating the payload to send the new labels %s\n",__FUNCTION__,labelList->label);
+
+                        printf("\n %s : Setting the number of labels in the payload \n",__FUNCTION__);
                         // Setting the number of labels being send
-                        uint8_t numberOfLabels = (uint8_t) 1; // Need to modify
+                        uint8_t numberOfLabels = (uint8_t) numbNewLabels; // Need to modify
                         memcpy(labelAssignmentPayLoad + cplength, &numberOfLabels, 1);
                         cplength++;
 
+                        printf("\n %s : Setting the label length in the payload \n",__FUNCTION__);
                         // Setting the label length being send
-                        uint8_t labelLength = (uint8_t) strlen(labelList.label); // Need to modify
+                        uint8_t labelLength = (uint8_t) strlen(labelList->label); // Need to modify
                         memcpy(labelAssignmentPayLoad + cplength, &labelLength, 1);
                         cplength++;
 
+                        printf("\n %s : Setting the label in the payload \n",__FUNCTION__);
+                        printf("\n %s : Setting the label in the payload \n",__FUNCTION__);
                         // Setting the labels being send
                         // Need to modify
-                        memcpy(labelAssignmentPayLoad + cplength, labelList.label, labelLength + 1);
+                        memcpy(labelAssignmentPayLoad + cplength, &(labelList->label), labelLength+1);
 
                         printf("\n Sending MESSAGE_TYPE_LABELS_AVAILABLE  to all the interface, "
                                        "interfaceListSize = %d payloadSize=%d \n", interfaceListSize,
@@ -1028,10 +1038,102 @@ int _get_MACTest(struct addr_tuple *myAddr, int numTierAddr) {
                     }
                 }
 
-                if(checkMSGType == MESSAGE_TYPE_LABELS_ACCEPTED){
-                    printf("\n Recieved MESSAGE_TYPE_LABELS_ACCEPTED ");
-                    // To be done later
-                }
+
+				if (checkMSGType == MESSAGE_TYPE_LABELS_AVAILABLE) {
+					printf("\n Received MESSAGE_TYPE_LABELS_AVAILABLE \n");
+
+					int numberLabels = ethhead[15];
+					printf("\n Number of Labels available = %d\n", numberLabels);
+					int i = 0;
+					struct labels *acceptedList;
+
+
+					// Accepting each label here
+					int messagePointer = 16;
+					for(;i<numberLabels;i++){
+
+						int labelLength = ethhead[messagePointer];
+						printf("\n Label Length = %d\n", labelLength);
+
+						messagePointer++;
+
+						char label[10];
+                        memset(label,'\0', 10);
+						memcpy(label,ethhead+messagePointer,labelLength);
+                        printf("\n TESTETETETETETET Label  =%s@@@@Label length= %d\n", label,strlen(label));
+
+						messagePointer = messagePointer + labelLength;
+
+						if(!recvdLabel) {
+							recvdLabel = true;
+							//set the label here
+							/* For Default tier address */
+							setTierInfo(label);
+						}
+
+						// pass it to tier address list
+						insertTierAddr(label);
+
+				/*		tierAddr[0] = malloc(1 + strlen(label));
+						strcpy(tierAddr[0], label);
+						tierAddrCount++;*/
+
+						printf("\nAdding the label to the list\n");
+
+						//creating a list of accepted labels
+						if(!acceptedList){
+							printf("\nAdding the first label to the list\n");
+							acceptedList  = (struct labels*) malloc(sizeof(struct labels));
+							memcpy(acceptedList->label,label,strlen(label));
+							acceptedList->next = NULL;
+						}
+						else {
+							printf("\nAdding all other labels to the list\n");
+							struct labels *newLabel = (struct labels *) malloc(sizeof(struct labels));
+							memcpy(newLabel->label, label, strlen(label));
+							newLabel->next = acceptedList;
+							acceptedList = newLabel;
+						}
+
+					}
+
+					// Generate Labels Accepted Message
+					int cplength = 0;
+					char labelAssignmentPayLoad[200];
+
+					// Clearing the payload
+					memset(labelAssignmentPayLoad,'\0', 200);
+
+					// Set tbe labels here .. TO be done
+					uint8_t numLabels = (uint8_t) numberLabels;
+					memcpy(labelAssignmentPayLoad+cplength, &numLabels, 1);
+					cplength++;
+
+					struct labels *temp =acceptedList;
+					// Copy all other labels to the labels accepted message
+					while(!temp){
+
+						char label[10];
+						memcpy(label,temp->label,strlen(temp->label));
+
+						// Set tbe labellength here
+						uint8_t labelLength = strlen(label);
+						memcpy(labelAssignmentPayLoad+cplength, &numLabels, 1);
+						cplength++;
+
+						// Set tbe label here
+						memcpy(labelAssignmentPayLoad+cplength,label , labelLength);
+						cplength = cplength + labelLength;
+					}
+
+					// Sending labels accepted message
+					ctrlLabelSend(MESSAGE_TYPE_LABELS_ACCEPTED,recvOnEtherPort, labelAssignmentPayLoad);
+
+				}
+
+				if (checkMSGType == MESSAGE_TYPE_LABELS_ACCEPTED) {
+					printf("\n Received MESSAGE_TYPE_LABELS_ACCEPTED \n");
+				}
 
               //  printf("\n CHeckL - recvOnEtherPort=%s",recvOnEtherPort);
 
@@ -1393,13 +1495,13 @@ int main(int argc, char **argv) {
 	// Tier address , IP address 
 	// 
 	if (endNode == 0) {
-		struct addr_tuple myAddr[endNWCount * (tierAddrCount)];
-		//printf("T0->%d ->%d\n", endNWCount, tierAddrCount);
+		struct addr_tuple myAddr[endNWCount * (myTotalTierAddress)];
+		//printf("T0->%d ->%d\n", endNWCount, myTotalTierAddress);
 
 		int index1, index2;
 		int numTemp = 0;
 		// if there are multiple IPS then do number of end IPS * tier addresses entries here.
-		for (index1 = 0; index1 < tierAddrCount; index1++) {
+		for (index1 = 0; index1 < myTotalTierAddress; index1++) {
 			for (index2 = 0; index2 < endNWCount; index2++) {
 
 				strcpy(myAddr[numTemp].tier_addr, tierAddr[index1]);
@@ -1426,7 +1528,7 @@ int main(int argc, char **argv) {
 		// Populate the address table.
 		// Can be written as a function.
 		int i = 0;
-		for (i = 0; i < tierAddrCount; i++) {
+		for (i = 0; i < myTotalTierAddress; i++) {
 			struct addr_tuple *a = (struct addr_tuple*) calloc(1,
 					sizeof(struct addr_tuple));
 			strncpy(a->tier_addr, myAddr[i].tier_addr,
@@ -1786,17 +1888,11 @@ void getMyTierAddresses(char* tierAddr[])
         // Clearing the payload
         memset(labelAssignmentPayLoad,'\0', 200);
 
-   /*     // Setting the ctrlMessageType
-        uint8_t messageType = (uint8_t) MESSAGE_TYPE_JOIN;
-        memcpy(labelAssignmentPayLoad+cplength, &messageType, 1);
-
-        cplength++;
- */
         // Setting the tierValue
         uint8_t tierValue = (uint8_t) myTierValue;
         memcpy(labelAssignmentPayLoad+cplength, &tierValue, 1);
 
-        // Wait for 5 seconds
+        // Wait for 2 seconds
         sleep(2);
 
         printf("\n Sending NULL join request to all its interfaces, "
@@ -1830,7 +1926,7 @@ void getMyTierAddresses(char* tierAddr[])
                 uint8_t checkMSGType = (ethhead[14]);
                 printf("\n checkMSGType=%d \n",checkMSGType);
 
-                if(checkMSGType == MESSAGE_TYPE_LABELS_AVAILABLE) {
+
 
                  //   checkMSGType = (ethhead[15]);
                  //   printf("\n checkMSGType=%d \n",checkMSGType);
@@ -1840,51 +1936,92 @@ void getMyTierAddresses(char* tierAddr[])
 
                         int numberLabels = ethhead[15];
                         printf("\n Number of Labels available = %d", numberLabels);
-
-                        int labelLength = ethhead[16];
-                        printf("\n Label Length = %d", labelLength);
-
-                        char label[5];
-                        memcpy(label,ethhead+17,labelLength+1);
-                        printf("\n Label  = %s\n", label);
-
-                        recvdLabel = true;
-
-						//set the label here
-                        /* For Default tier address */
-                        setTierInfo(label);
-
-                        // pass it to tier address list
-                        insertTierAddr(label);
-
-                        tierAddr[0] = malloc(1 + strlen(label));
-                        strcpy(tierAddr[0], label);
-                        tierAddrCount++;
+                        int i = 0;
+                        struct labels *acceptedList;
 
 
-                       // exit(1);
+                        // Accepting each label here
+                        int messagePointer = 16;
+                        for(;i<numberLabels;i++){
+
+                            int labelLength = ethhead[messagePointer];
+                            printf("\n Label Length = %d\n", labelLength);
+
+                            messagePointer++;
+
+                            char label[10];
+                            memcpy(label,ethhead+messagePointer,labelLength);
+                            printf("\n Label  = %s  Label length= %d\n", label,strlen(label));
+
+                            messagePointer = messagePointer + labelLength;
+
+                            if(!recvdLabel) {
+                                recvdLabel = true;
+                                //set the label here
+                                /* For Default tier address */
+                                setTierInfo(label);
+                            }
+
+                            // pass it to tier address list
+                            insertTierAddr(label);
+
+                            tierAddr[0] = malloc(1 + strlen(label));
+                            strcpy(tierAddr[0], label);
+                           // tierAddrCount++;
+
+                            printf("\nAdding the label to the list\n");
+
+                            //creating a list of accepted labels
+                            if(!acceptedList){
+                                printf("\nAdding the first label to the list\n");
+                                acceptedList  = (struct labels*) malloc(sizeof(struct labels));
+                                memcpy(acceptedList->label,label,strlen(label));
+                                acceptedList->next = NULL;
+                            }
+                            else {
+                                printf("\nAdding all other labels to the list\n");
+                                struct labels *newLabel = (struct labels *) malloc(sizeof(struct labels));
+                                memcpy(newLabel->label, label, strlen(label));
+                                newLabel->next = acceptedList;
+                                acceptedList = newLabel;
+                            }
+
+
+                        }
+
                         // Generate Labels Accepted Message
-
                         cplength = 0;
+
                         // Clearing the payload
                         memset(labelAssignmentPayLoad,'\0', 200);
 
-                        // Setting the ctrlMessageType
- /*                       uint8_t messageType = (uint8_t) MESSAGE_TYPE_LABELS_ACCEPTED;
-                        memcpy(labelAssignmentPayLoad+cplength, &messageType, 1);
-
-                        cplength++;
-*/
                         // Set tbe labels here .. TO be done
-                        //uint8_t tierValue = (uint8_t) myTierValue;
-                        //memcpy(labelAssignmentPayLoad+cplength, &tierValue, 1);
+                        uint8_t numLabels = (uint8_t) numberLabels;
+                        memcpy(labelAssignmentPayLoad+cplength, &numLabels, 1);
+                        cplength++;
+
+                        struct labels *temp =acceptedList;
+                        // Copy all other labels to the labels accepted message
+                        while(!temp){
+
+                            char label[10];
+                            memcpy(label,temp->label,strlen(temp->label));
+
+                            // Set tbe labellength here
+                            uint8_t labelLength = strlen(label);
+                            memcpy(labelAssignmentPayLoad+cplength, &numLabels, 1);
+                            cplength++;
+
+                            // Set tbe label here
+                            memcpy(labelAssignmentPayLoad+cplength,label , labelLength);
+                            cplength = cplength + labelLength;
+                        }
 
                         // Sending labels accepted message
                         ctrlLabelSend(MESSAGE_TYPE_LABELS_ACCEPTED,recvOnEtherPort, labelAssignmentPayLoad);
 
-
                     }
-                }
+
                 // Add timeout for wait
                 // Get the addresses
                 // Add it to the local table
@@ -1900,31 +2037,94 @@ void getMyTierAddresses(char* tierAddr[])
     printf("\n Exiting %s",__FUNCTION__);
 }
 
+void addLabelsList(struct labels* labelList,char label[]){
 
-struct labels generateChildLabel(char* myEtherPort, int childTier){
+    /*
+     * struct labels{
+    char label[10];
+    struct labels *next;
+};
 
-    printf("\n\n Inside %s",__FUNCTION__);
-    printf("\n Child port = %s",myEtherPort);
-    char* myTierAddress = getTierInfo();
-    printf("\n My TierAddress = %s",myTierAddress);
+     */
+
+    printf("\nEnter %s, Label to be added : %s\n",__FUNCTION__,label);
+    struct labels* newlabel = (struct labels*) malloc(sizeof(struct labels));
+    memcpy(newlabel->label,label,strlen(label));
+    newlabel->next = NULL;
+    printf("\n Created the label %p \n",labelList);
+
+    if(!labelList){
+        printf("\n labellist is null now \n");
+        labelList = newlabel;
+    }
+    else{
+        struct labels* temp = labelList;
+        while(temp->next!=NULL){
+            temp = temp->next;
+        }
+        temp->next = newlabel;
+    }
+    printf("\nExit %s",__FUNCTION__);
+}
+
+
+int generateChildLabel(char* myEtherPort, int childTier, struct labels** labelList) {
+
+    printf("\n\n Inside %s", __FUNCTION__);
+    printf("\n Child port = %s", myEtherPort);
+
+    // Get each tier address and create the labels here
+
+    char *myTierAddress = getTierInfo();
+    int countNewLabels = 0;
+    //printf("\n My TierAddress = %s", myTierAddress);
 
     // Creating the label for the child here
     char childLabel[10];
-    memset(childLabel,'\0',10);
+    memset(childLabel, '\0', 10);
     sprintf(childLabel, "%d", childTier);
 
-    //Getting the UID of the label of hte current address.
+    struct nodeTL *temp = headTL;
 
+    printf("\n Going through each of my tier addresses , primary address = %s\n",temp->tier);
+
+    while (temp) {
+
+        countNewLabels++;
+        printf("\n Current TierAddress = %s \n", temp->tier);
+        memset(childLabel, '\0', 10);
+        sprintf(childLabel, "%d", childTier);
+        // Creating the child Label here
+        getParentIdLabel(temp->tier, childLabel, myEtherPort);
+
+        struct labels* newLabel =  (struct labels*) malloc(sizeof(struct labels));
+
+		printf("\n childLabel = %s  strlen(childLabel)=%d",childLabel,strlen(childLabel));
+        memcpy(newLabel->label,childLabel,strlen(childLabel)+1);
+        printf("\n newLabel->label = %s  strlen(newLabel->label)=%d",childLabel,strlen(newLabel->label));
+
+        newLabel->next = *labelList;
+		*labelList = newLabel;
+        printf("\n Created the new child label = %s %p\n", newLabel->label,*labelList);
+        temp = temp->next;
+    }
+
+    printf("\n Exit: %s , Number of labels generated = %d  labelList= %s\n",__FUNCTION__,countNewLabels,(*labelList)->label);
+    return countNewLabels;
+
+}
+
+
+void getParentIdLabel(char myTierAddress[],char childLabel[], char myEtherPort[]){
+    printf("\n My TierAddress = %s",myTierAddress);
+    //Getting the UID of the label of hte current address.
     int i = 0;
     while(myTierAddress[i] != '.'){
         i++;
     }
-
     int curLengthChildLabel = strlen(childLabel);
     strcpy(childLabel+curLengthChildLabel, myTierAddress+i);
-
     printf("\n After appending the uid of the parent, childLabel = %s ",childLabel);
-
 
     char temp[10] = ".";
     strcpy(temp+1,myEtherPort+3);
@@ -1934,18 +2134,9 @@ struct labels generateChildLabel(char* myEtherPort, int childTier){
     strcpy(childLabel+curLengthChildLabel, temp);
 
     printf("\n After appending the port ID, ChildLabel = %s",childLabel);
-
-
-    //Adding it to a list and sending it out.
-
-    struct labels labelList;
-    strcpy(labelList.label,childLabel);
-    labelList.next = NULL;
-
-    printf("\n Exit: %s",__FUNCTION__);
-    return labelList;
-
 }
+
+
 
 void sendAvailableLabels(){
 // keep a child count

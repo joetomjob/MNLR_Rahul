@@ -77,7 +77,7 @@ void addTierAddr(char inTier[20]) {
 		temp->next = headTL;
 		headTL = temp;
 	}
-	//printf("TEST: Tier Address added successfully %s\n", temp->tier);
+	printf("addTierAddr@@@@@@@@@@@@@: Tier Address added successfully %s\n", temp->tier);
 }
 
 /**
@@ -90,22 +90,19 @@ void addTierAddr(char inTier[20]) {
  */
 void insertTierAddr(char inTier[20]) {
 
+    printf("\ninsertTierAddr is called , label=%s labelLength=%d\n",inTier,strlen(inTier));
 	struct nodeTL *temp;
 	temp = headTL;
 	if (temp == NULL) {
-
 		addTierAddr(inTier);
 		myTotalTierAddress++;
-
 	} else {
-
 		int checkNode = findTierAddr(inTier);
-
-				if (checkNode == 1) {
-
-		appendTierAddr(inTier);
-		myTotalTierAddress++;
-	}
+        printf("\ninsertTierAddr checkNode=%d",checkNode);
+        if (checkNode == 1) {
+            appendTierAddr(inTier);
+            myTotalTierAddress++;
+	    }
 	}
 }
 
@@ -133,6 +130,8 @@ int findTierAddr(char inTier[20]) {
 		// Target Tier Address
 		// Length Check
 		// Value check
+
+        printf("\n findTierAddr : Label to check=%s, current label=%s \n",inTier,fNode->tier);
 
 		if (strlen(fNode->tier) == strlen(inTier)) {
 			if (strncmp(fNode->tier, inTier, strlen(inTier)) == 0) {

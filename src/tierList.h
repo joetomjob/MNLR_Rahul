@@ -77,7 +77,7 @@ void addTierAddr(char inTier[20]) {
 		temp->next = headTL;
 		headTL = temp;
 	}
-	printf("addTierAddr@@@@@@@@@@@@@: Tier Address added successfully %s\n", temp->tier);
+	//printf("\naddTierAddr: Tier Address added successfully %s\n", temp->tier);
 }
 
 /**
@@ -90,7 +90,7 @@ void addTierAddr(char inTier[20]) {
  */
 void insertTierAddr(char inTier[20]) {
 
-    printf("\ninsertTierAddr is called , label=%s labelLength=%d\n",inTier,strlen(inTier));
+    printf("\ninsertTierAddr is called , label=%s labelLength=%d\n",inTier,(int)strlen(inTier));
 	struct nodeTL *temp;
 	temp = headTL;
 	if (temp == NULL) {

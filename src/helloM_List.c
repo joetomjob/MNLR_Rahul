@@ -136,6 +136,7 @@ int freeInterfaces();
 int generateChildLabel(char* myEtherPort, int childTier,struct labels** labelList);
 void addLabelsList(struct labels* labelList,char label[]);
 void getParentIdLabel(char myTierAddress[],char childLabel[],char myEtherPort[]);
+void printMyLabels();
 
 extern int myTotalTierAddress;
 /**
@@ -232,9 +233,12 @@ int _get_MACTest(struct addr_tuple *myAddr, int numTierAddr) {
 	freeInterfaces();
 	interfaceListSize = 0;
 
+    printMyLabels();
     printf("\n Processing messages now...\n");
     // Repeats the steps from now on
 	while (1) {
+
+        //printMyLabels();
 
 		int flag = 0;
 		int flagIP = 0;
@@ -564,21 +568,21 @@ int _get_MACTest(struct addr_tuple *myAddr, int numTierAddr) {
 			ethhead = (unsigned char *) buffer;
 
 			if (ethhead != NULL) {
-
-				 printf("\n--------------------------------------"
-				 	"\n   MAC Destination : "
-				 		"%02x:%02x:%02x:%02x:%02x:%02x\n", ethhead[0],
-				 		ethhead[1], ethhead[2], ethhead[3], ethhead[4],
-				 		ethhead[5]);
-
-				 printf("        MAC Origin : "
-				 		"%02x:%02x:%02x:%02x:%02x:%02x\n", ethhead[6],
-				 		ethhead[7], ethhead[8], ethhead[9], ethhead[10],
-				 		ethhead[11]);
-				 printf("              Type : %02x:%02x \n", ethhead[12],
-				 		ethhead[13]);
-				 printf("               MSG : %d \n", ethhead[14]);
-				 printf("\n");
+//
+//				 printf("\n--------------------------------------"
+//				 	"\n   MAC Destination : "
+//				 		"%02x:%02x:%02x:%02x:%02x:%02x\n", ethhead[0],
+//				 		ethhead[1], ethhead[2], ethhead[3], ethhead[4],
+//				 		ethhead[5]);
+//
+//				 printf("        MAC Origin : "
+//				 		"%02x:%02x:%02x:%02x:%02x:%02x\n", ethhead[6],
+//				 		ethhead[7], ethhead[8], ethhead[9], ethhead[10],
+//				 		ethhead[11]);
+//				 printf("              Type : %02x:%02x \n", ethhead[12],
+//				 		ethhead[13]);
+//				 printf("               MSG : %d \n", ethhead[14]);
+//				 printf("\n");
 
 				MPLROtherReceivedCount++;
 
@@ -991,7 +995,7 @@ int _get_MACTest(struct addr_tuple *myAddr, int numTierAddr) {
                         printf("\n Interface from which the request recvd = %s", recvOnEtherPort);
 
                         struct labels* labelList;
-
+                        //labelList = NULL;
                         int numbNewLabels = generateChildLabel(recvOnEtherPort, tierValueRequestedNode, &labelList);
                         printf("\n %s : Labels are generated\n",__FUNCTION__);
                         //Send this labelList to recvOnEtherPort
@@ -1016,19 +1020,36 @@ int _get_MACTest(struct addr_tuple *myAddr, int numTierAddr) {
                         // Setting the number of labels being send
                         uint8_t numberOfLabels = (uint8_t) numbNewLabels; // Need to modify
                         memcpy(labelAssignmentPayLoad + cplength, &numberOfLabels, 1);
+                        printf("\n %s : labelAssignmentPayLoad(string) = %s",__FUNCTION__,labelAssignmentPayLoad);
                         cplength++;
 
-                        printf("\n %s : Setting the label length in the payload \n",__FUNCTION__);
-                        // Setting the label length being send
-                        uint8_t labelLength = (uint8_t) strlen(labelList->label); // Need to modify
-                        memcpy(labelAssignmentPayLoad + cplength, &labelLength, 1);
-                        cplength++;
+                        struct labels* temp = labelList;
+                        while(temp!=NULL) {
+                            printf("\n label list is not null\n");
+                            printf("\n current label in the message = %s\n",temp->label);
+                            printf("\n %s : Setting the label length in the payload \n", __FUNCTION__);
+                            // Setting the label length being send
+                            uint8_t labelLength = (uint8_t) strlen(temp->label); // Need to modify
+                            memcpy(labelAssignmentPayLoad + cplength, &labelLength, 1);
+                            cplength++;
 
-                        printf("\n %s : Setting the label in the payload \n",__FUNCTION__);
-                        printf("\n %s : Setting the label in the payload \n",__FUNCTION__);
-                        // Setting the labels being send
-                        // Need to modify
-                        memcpy(labelAssignmentPayLoad + cplength, &(labelList->label), labelLength+1);
+                            printf("\n %s : Setting the label in the payload \n", __FUNCTION__);
+                            // Setting the labels being send
+                            // Need to modify
+                            memcpy(labelAssignmentPayLoad + cplength, temp->label, labelLength);
+                            cplength = cplength + labelLength;
+                            temp = temp->next;
+                            printf("\n %s : GETTING THE NEXT LABEL \n", __FUNCTION__);
+
+                        }
+                        printf("\n MESSAGE BEING SEND = %s",labelAssignmentPayLoad);
+                        printf("\n MESSAGE LENGTH = %d",(int)strlen(labelAssignmentPayLoad));
+                        int i;
+                        for(i= 0 ; i < 200; i++){
+                            printf("%c",labelAssignmentPayLoad[i]);
+                        }
+
+                      //  printf("\n MESSAGE BEING SEND = %s",labelAssignmentPayLoad);
 
                         printf("\n Sending MESSAGE_TYPE_LABELS_AVAILABLE  to all the interface, "
                                        "interfaceListSize = %d payloadSize=%d \n", interfaceListSize,
@@ -1060,7 +1081,7 @@ int _get_MACTest(struct addr_tuple *myAddr, int numTierAddr) {
 						char label[10];
                         memset(label,'\0', 10);
 						memcpy(label,ethhead+messagePointer,labelLength);
-                        printf("\n TESTETETETETETET Label  =%s@@@@Label length= %d\n", label,strlen(label));
+                        printf("\n Label  =%s Label length= %d\n", label,(int)strlen(label));
 
 						messagePointer = messagePointer + labelLength;
 
@@ -1129,13 +1150,14 @@ int _get_MACTest(struct addr_tuple *myAddr, int numTierAddr) {
 					// Sending labels accepted message
 					ctrlLabelSend(MESSAGE_TYPE_LABELS_ACCEPTED,recvOnEtherPort, labelAssignmentPayLoad);
 
+                    printMyLabels();
+
 				}
 
 				if (checkMSGType == MESSAGE_TYPE_LABELS_ACCEPTED) {
 					printf("\n Received MESSAGE_TYPE_LABELS_ACCEPTED \n");
 				}
 
-              //  printf("\n CHeckL - recvOnEtherPort=%s",recvOnEtherPort);
 
             }
 
@@ -1303,7 +1325,7 @@ int main(int argc, char **argv) {
 				break;
 			}
 			opt = argv[0];
-            printf("\n OPT = %s",opt);
+            //printf("\n OPT = %s",opt);
 			// Checking for -L
 			if (strcmp(opt, "-L") == 0) {
 				argc--;
@@ -1951,7 +1973,7 @@ void getMyTierAddresses(char* tierAddr[])
 
                             char label[10];
                             memcpy(label,ethhead+messagePointer,labelLength);
-                            printf("\n Label  = %s  Label length= %d\n", label,strlen(label));
+                            printf("\n Label  = %s  Label length= %d\n", label,(int)strlen(label));
 
                             messagePointer = messagePointer + labelLength;
 
@@ -2085,6 +2107,7 @@ int generateChildLabel(char* myEtherPort, int childTier, struct labels** labelLi
     sprintf(childLabel, "%d", childTier);
 
     struct nodeTL *temp = headTL;
+    *labelList = NULL;
 
     printf("\n Going through each of my tier addresses , primary address = %s\n",temp->tier);
 
@@ -2099,9 +2122,9 @@ int generateChildLabel(char* myEtherPort, int childTier, struct labels** labelLi
 
         struct labels* newLabel =  (struct labels*) malloc(sizeof(struct labels));
 
-		printf("\n childLabel = %s  strlen(childLabel)=%d",childLabel,strlen(childLabel));
+		printf("\n childLabel = %s  strlen(childLabel)=%d",childLabel,(int)strlen(childLabel));
         memcpy(newLabel->label,childLabel,strlen(childLabel)+1);
-        printf("\n newLabel->label = %s  strlen(newLabel->label)=%d",childLabel,strlen(newLabel->label));
+        printf("\n newLabel->label = %s  strlen(newLabel->label)=%d",childLabel,(int)strlen(newLabel->label));
 
         newLabel->next = *labelList;
 		*labelList = newLabel;
@@ -2138,11 +2161,16 @@ void getParentIdLabel(char myTierAddress[],char childLabel[], char myEtherPort[]
 
 
 
-void sendAvailableLabels(){
-// keep a child count
-// create new addresses 
-// Send upto 3 addresses to a single node.
-// Send the message as labels available.
+void printMyLabels(){
+
+
+    struct nodeTL *temp = headTL;
+    printf("\n My labels are: ");
+    while(temp){
+        printf(" %s ,",temp->tier);
+        temp = temp->next;
+    }
+
 
 }
 

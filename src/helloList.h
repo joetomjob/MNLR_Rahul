@@ -17,6 +17,10 @@
 #include "boolean.h"
 #include "fwdAlgorithmHelper.h"
 
+extern FILE *fptr;
+extern int enableLogScreen;
+extern int enableLogFiles;
+
 void update(char inTier[20], char inPort[20]);
 int find(char inTier[20], char inPort[20]);
 boolean containsTierAddress(char testStr[20]);
@@ -328,8 +332,14 @@ boolean containsTierAddress(char testStr[20]) {
 
 	if (fNode == NULL) {
 
-		printf("ERROR: Neighbor List is empty (Isolated Node)\n");
-		printf("TEST: Before return check %d \n", check);
+		if(enableLogScreen){
+			printf("ERROR: Neighbor List is empty (Isolated Node)\n");
+			printf("TEST: Before return check %d \n", check);
+		}
+		if(enableLogFiles){
+			fprintf(fptr,"ERROR: Neighbor List is empty (Isolated Node)\n");
+			fprintf(fptr,"TEST: Before return check %d \n", check);
+		}
 		return check;
 	}
 
@@ -372,7 +382,10 @@ boolean setByTierPartial(char inTier[20], boolean setFWDFields) {
 
 	if (fNode == NULL) {
 
-		printf("ERROR: Failed to set FWD Tier Address (Isolated Node)\n");
+		if(enableLogScreen)
+			printf("ERROR: Failed to set FWD Tier Address (Isolated Node)\n");
+		if(enableLogFiles)
+			fprintf(fptr,"ERROR: Failed to set FWD Tier Address (Isolated Node)\n");
 		return returnVal;
 	}
 
@@ -436,7 +449,10 @@ boolean setByTierOnly(char inTier[20], boolean setFWDFields) {
 
 	if (fNode == NULL) {
 
-		printf("ERROR: Failed to set FWD Tier Address (Isolated Node)\n");
+		if(enableLogScreen)
+			printf("ERROR: Failed to set FWD Tier Address (Isolated Node)\n");
+		if(enableLogFiles)
+			fprintf(fptr,"ERROR: Failed to set FWD Tier Address (Isolated Node)\n");
 		return returnVal;
 	}
 
@@ -534,15 +550,24 @@ void printNeighbourTable() {
 	struct nodeHL *fNode = headHL;
 	char* temp;
 	if (fNode == NULL) {
-		printf("ERROR: Neighbor List is empty (Isolated Node)\n");
+		if(enableLogScreen)
+			printf("ERROR: Neighbor List is empty (Isolated Node)\n");
+		if(enableLogFiles)
+			fprintf(fptr,"ERROR: Neighbor List is empty (Isolated Node)\n");
 		return;
 	}
 	// traverse the list
 	// testing
-	printf("\n*************** Neighbor Table *************");
+	if(enableLogScreen)
+		printf("\n*************** Neighbor Table *************");
+	if(enableLogFiles)
+		fprintf(fptr,"\n*************** Neighbor Table *************");
 	while (fNode != NULL) {
 		temp  = fNode->tier;		
-		printf("\n ------- %s --------",temp);
+		if(enableLogScreen)
+			printf("\n ------- %s --------",temp);
+		if(enableLogFiles)
+			fprintf(fptr,"\n ------- %s --------",temp);
 		fNode = fNode->next;
 	}
 	return;
@@ -561,7 +586,10 @@ void printNeighbourTable() {
 	struct nodeHL *fNode = headHL;
 	char* temp;
 	if (fNode == NULL) {
-		printf("ERROR: Neighbor List is empty (Isolated Node)\n");
+		if(enableLogScreen)
+			printf("ERROR: Neighbor List is empty (Isolated Node)\n");
+		if(enableLogFiles)
+			fprintf(fptr,"ERROR: Neighbor List is empty (Isolated Node)\n");
 		return;
 	}
 	
@@ -600,7 +628,10 @@ void printNeighbourTable() {
 	struct nodeHL *fNode = headHL;
 	char* temp;
 	if (fNode == NULL) {
-		printf("ERROR: Neighbor List is empty (Isolated Node)\n");
+		if(enableLogScreen)
+			printf("ERROR: Neighbor List is empty (Isolated Node)\n");
+		if(enableLogFiles)
+			fprintf(fptr,"ERROR: Neighbor List is empty (Isolated Node)\n");
 		return;
 	}
 	
@@ -609,7 +640,10 @@ void printNeighbourTable() {
 
 	while (fNode != NULL) {
 		temp  = fNode->tier;		
-		printf("\n findChildLongst : Current Neighbour = %s \n",temp);
+		if(enableLogScreen)
+			printf("\n findChildLongst : Current Neighbour = %s \n",temp);
+		if(enableLogFiles)
+			fprintf(fptr,"\n findChildLongst : Current Neighbour = %s \n",temp);
 		if(strlen(temp) <= strlen(desTierAdd)){
 
 			int tempLen = findMatchedTeirAddrLength(desTierAdd,temp);
@@ -621,7 +655,10 @@ void printNeighbourTable() {
 		fNode = fNode->next;
 	}
 
-	printf("\n findChildLongst : Result = %s \n",childTierAdd);
+	if(enableLogScreen)
+		printf("\n findChildLongst : Result = %s \n",childTierAdd);
+	if(enableLogFiles)
+		fprintf(fptr,"\n findChildLongst : Result = %s \n",childTierAdd);
 	return;
  }
 
@@ -640,7 +677,10 @@ void printNeighbourTable() {
 	struct nodeHL *fNode = headHL;
 	char* temp;
 	if (fNode == NULL) {
-		printf("ERROR: Neighbor List is empty (Isolated Node)\n");
+		if(enableLogScreen)
+			printf("ERROR: Neighbor List is empty (Isolated Node)\n");
+		if(enableLogFiles)
+			fprintf(fptr,"ERROR: Neighbor List is empty (Isolated Node)\n");
 		return;
 	}
 	
@@ -650,10 +690,19 @@ void printNeighbourTable() {
 
 	while (fNode != NULL) {
 		temp  = fNode->tier;	
-		printf("\n%s temp->%s desTierAdd-->%s",__FUNCTION__,temp,desTierAdd);
-		printf("\n %s Checking the match for %s in desTierAdd=%s",__FUNCTION__,temp,desTierAdd);	
+		if(enableLogScreen){
+			printf("\n%s temp->%s desTierAdd-->%s",__FUNCTION__,temp,desTierAdd);
+			printf("\n %s Checking the match for %s in desTierAdd=%s",__FUNCTION__,temp,desTierAdd);	
+		}
+		if(enableLogFiles){
+			fprintf(fptr,"\n%s temp->%s desTierAdd-->%s",__FUNCTION__,temp,desTierAdd);
+			fprintf(fptr,"\n %s Checking the match for %s in desTierAdd=%s",__FUNCTION__,temp,desTierAdd);	
+		}
 		tempLen = findMatchedTeirAddrLength(desTierAdd,temp);
-		printf("\n %s Matched Length = %d",__FUNCTION__,tempLen);	
+		if(enableLogScreen)
+			printf("\n %s Matched Length = %d",__FUNCTION__,tempLen);	
+		if(enableLogFiles)
+			fprintf(fptr,"\n %s Matched Length = %d",__FUNCTION__,tempLen);	
 		if(tempLen > longestMtchLength){
 			longestMtchLength = tempLen;
 			strcpy(longstMatchingNgbr, temp);
@@ -684,7 +733,10 @@ void printNeighbourTable() {
  	int val1 = 0;
  	int val2 = 0;
  	
- 	printf("\n %s Enter : add1 = %s add2 = %s \n",__FUNCTION__,add1,add2);   
+ 	if(enableLogScreen)
+ 		printf("\n %s Enter : add1 = %s add2 = %s \n",__FUNCTION__,add1,add2);   
+ 	if(enableLogFiles)
+		fprintf(fptr,"\n %s Enter : add1 = %s add2 = %s \n",__FUNCTION__,add1,add2);   
 	while(add1[posAdd1++] != '.');
  	while(add2[posAdd2++] != '.');
 		
@@ -734,7 +786,10 @@ void printNeighbourTable() {
  		val1 = val2 = 0;
 
  	} 
- 	printf("\n %s :Exit- Matched Length = %d",__FUNCTION__,matchedLength);
+ 	if(enableLogScreen)
+ 		printf("\n %s :Exit- Matched Length = %d",__FUNCTION__,matchedLength);
+ 	if(enableLogFiles)
+		fprintf(fptr,"\n %s :Exit- Matched Length = %d",__FUNCTION__,matchedLength);
  	return matchedLength;
  }
 

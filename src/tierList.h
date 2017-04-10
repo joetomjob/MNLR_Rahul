@@ -64,18 +64,18 @@ void appendTierAddr(char inTier[20]) {
  */
 void addTierAddr(char inTier[20]) {
 
-	struct nodeTL *temp;
-	temp = (struct nodeTL *) malloc(sizeof(struct nodeTL));
-	memset(temp->tier,'\0',20);
+	struct nodeTL *temp; //create a new pointer temp 
+	temp = (struct nodeTL *) malloc(sizeof(struct nodeTL)); //allocate memory to temp
+	memset(temp->tier,'\0',20); //set null in the memory allocated
 
-	strcpy(temp->tier, inTier);
+	strcpy(temp->tier, inTier); //copy the tier address to temp
 
-	if (headTL == NULL) {
-		headTL = temp;
-		headTL->next = NULL;
+	if (headTL == NULL) {   
+		headTL = temp;//if there is nothing in headTL, we set temp as headTL
+		headTL->next = NULL; //the pointer will then point to null
 	} else {
-		temp->next = headTL;
-		headTL = temp;
+		temp->next = headTL; //next of temp is set to headTL. we set the next pointer of temp to the head of the linked list 
+		headTL = temp; // now the headTL is set as temp. the head of the linkedlist is set as temp.
 	}
 	//printf("\naddTierAddr: Tier Address added successfully %s\n", temp->tier);
 }
@@ -93,15 +93,18 @@ void insertTierAddr(char inTier[20]) {
     printf("\ninsertTierAddr is called , label=%s labelLength=%d\n",inTier,(int)strlen(inTier));
 	struct nodeTL *temp;
 	temp = headTL;
-	if (temp == NULL) {
-		addTierAddr(inTier);
-		myTotalTierAddress++;
-	} else {
+	if (temp == NULL) { //if their is no initial tier address, we will call addTierAddress to add tier address to list
+
+		addTierAddr(inTier); //this fuction adds tier address ti list
+		myTotalTierAddress++;//keeps track of the tier address. incremented once we add tier address to list
+
+	} else { //if there is initioal tier address in headTL, we call append TierAddr, which will append tier address to list
+
 		int checkNode = findTierAddr(inTier);
         printf("\ninsertTierAddr checkNode=%d",checkNode);
         if (checkNode == 1) {
             appendTierAddr(inTier);
-            myTotalTierAddress++;
+			myTotalTierAddress++; //keeps track of the tier address. incremented once we add tier address to list
 	    }
 	}
 }

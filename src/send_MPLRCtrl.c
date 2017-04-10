@@ -8,6 +8,10 @@
 
 #include "sendAndFwd.h"
 
+extern FILE *fptr;
+extern int enableLogScreen;
+extern int enableLogFiles;
+
 /**
  * mainSend(char[],char[])
  *
@@ -161,8 +165,11 @@ int ctrlSend(char etherPort[], char inPayload[]) {
 //	printf("TEST: Before sendto() - send_MPLRCtrl.c \n");
 	// Send packet
 	if (sendto(sockfd, frame, tx_len + 1 + payLoad_Size, 0,
-			(struct sockaddr*) &socket_address, sizeof(struct sockaddr_ll)) < 0)
-		printf("\n ERROR: Send failed\n");
+			(struct sockaddr*) &socket_address, sizeof(struct sockaddr_ll)) < 0) //if sendto returns value less 0, then message sending is failed.
+		if(enableLogScreen)
+			printf("ERROR: Send failed\n");
+		if(enableLogFiles)
+			fprintf(fptr,"ERROR: Send failed\n");
 
 	close(sockfd);
 	return 0;

@@ -1,5 +1,9 @@
 #include "endNetworkUtils.h"
 
+extern FILE *fptr;
+extern int enableLogScreen;
+extern int enableLogFiles;
+
 struct addr_tuple *tablehead = NULL;
 
 void clearEntryState() {
@@ -167,10 +171,16 @@ struct addr_tuple *find_entry_LL(struct in_addr *ip, char *tierAddr) {
 void print_entries_LL() {
 	struct addr_tuple *current;
 
-	printf("Tier Address\t\tIP Address\n");
+	if(enableLogScreen)
+		printf("Tier Address\t\tIP Address\n");
+	if(enableLogFiles)
+		fprintf(fptr,"Tier Address\t\tIP Address\n");
 	for (current = tablehead; current != NULL; current = current->next) {
-		printf("%s\t\t\t%s/%u\n", current->tier_addr,
-				inet_ntoa(current->ip_addr), current->cidr);
+		if(enableLogScreen)
+			printf("%s\t\t\t%s/%u\n", current->tier_addr, inet_ntoa(current->ip_addr), current->cidr);
+		if(enableLogFiles)
+			fprintf(fptr,"%s\t\t\t%s/%u\n", current->tier_addr, inet_ntoa(current->ip_addr), current->cidr);
+
 	}
 }
 
@@ -236,7 +246,9 @@ int buildPayload(uint8_t *data, int msgLen, int checkIndex) {
 	}
 	return payloadLen;
 }
+/*
 
+*/
 int buildPayloadRemoveAdvts(uint8_t *data, struct addr_tuple *failedIPS) {
         struct addr_tuple *current;
                                 
@@ -277,12 +289,15 @@ int buildPayloadRemoveAdvts(uint8_t *data, struct addr_tuple *failedIPS) {
         }
         return payloadLen;
 }
-
+/* function to update the last 4 bytes*/
 char* updateEndTierAddr(char destinationInterfaceIPAddr[]) {
 
 	struct in_addr ip;
-	if (inet_pton(AF_INET, destinationInterfaceIPAddr, &ip) == -1) {
-		printf("Error: inet_pton() returned error");
+	if (inet_pton(AF_INET, destinationInterfaceIPAddr, &ip) == -1) { //inet_pton - convert IPv4 and IPv6 addresses from text to binary form
+		if(enableLogScreen)
+			printf("Error: inet_pton() returned error");
+		if(enableLogFiles)
+			fprintf(fptr,"Error: inet_pton() returned error");
 	}
 
 	struct addr_tuple *current = tablehead;
@@ -294,7 +309,7 @@ char* updateEndTierAddr(char destinationInterfaceIPAddr[]) {
 		temp.s_addr = (temp.s_addr >> (32 - current->cidr))
 				<< (32 - current->cidr);
 
-		temp.s_addr = htonl(temp.s_addr);
+		temp.s_addr = htonl(temp.s_addr); //The htonl() function converts the unsigned integer hostlong from host byte order to network byte order.
 		if (temp.s_addr == current->ip_addr.s_addr) {
 
 			//printf("updateEndTierAddr %s Found tier\n", current->tier_addr);
@@ -311,7 +326,10 @@ struct in_addr* getNetworkIP(char destinationInterfaceIPAddr[]) {
 
 	struct in_addr ip;
 	if (inet_pton(AF_INET, destinationInterfaceIPAddr, &ip) == -1) {
-		printf("Error: inet_pton() returned error");
+		if(enableLogScreen)
+			printf("Error: inet_pton() returned error");
+		if(enableLogFiles)
+			fprintf(fptr,"Error: inet_pton() returned error");
 	}
 
 	struct addr_tuple *current = tablehead;

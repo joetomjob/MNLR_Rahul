@@ -13,6 +13,7 @@
 #include <netinet/if_ether.h>
 #include <time.h>
 #include <arpa/inet.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -102,11 +103,11 @@ long long int errorCount = 0;
 int totalIPError = 0;
 int finalARGCValue = -100;
 int endNode = -1;
-FILE *fptr;
+FILE *fptr; //global variable. TO enable logs to be written to files 
 int myTierValue = -1;
 int tierAddrCount = 0;
-int enableLogsScreen = 1;
-int enableLogsFile = 1;
+int enableLogScreen = 1; //flag to set whether logs need to be shown in screen
+int enableLogFiles = 1; //flag to set whether logs need to be shown in file
 bool recvdLabel = false;
 
 struct labels{
@@ -152,15 +153,18 @@ extern int myTotalTierAddress;
 
 int _get_MACTest(struct addr_tuple *myAddr, int numTierAddr) {
 
-	if(enableLogsFile) printf("\n\n MNLR started  ... \n");
+	if(enableLogScreen)
+		printf("\n MNLR started  ... \n");
+	if(enableLogFiles)
+		fprintf(fptr,"\n MNLR started  ... \n");
 
-	time_t time0 = time(0);
-	time_t time1;
+	time_t time0 = time(0); //store the start time in time0, so that later we can compare
+	time_t time1; //declare a new timer. time1 will be used later to compare with time0 to compare timings 
 
-	int sock, n;
-	int sockIP, nIP;
+	int sock, n; //declare 2 integer variables for sock
+	int sockIP, nIP; //declare 2 integer variables for socketIp and nIO
 
-	char buffer[2048];
+	char buffer[2048]; //
 	char bufferIP[2048];
 
 	unsigned char *ethhead = NULL;
@@ -193,16 +197,18 @@ int _get_MACTest(struct addr_tuple *myAddr, int numTierAddr) {
 	char ctrlPayLoadA[200];
 	memset(ctrlPayLoadA, '\0', 200);
 	uint8_t numOfAddr = (uint8_t) getCountOfTierAddr();
-	memcpy(ctrlPayLoadA, &numOfAddr, 1);
+	memcpy(ctrlPayLoadA, &numOfAddr, 1); //memory of numAddr is assigned to ctrlPayLoadA
 	int cpLength = 1;
 
 	int q = 0;
+
+	//size of the tier address and tier Address is copied to cntrlPayLoadA in the below for loop
 	for (; q < getCountOfTierAddr(); q++) {
 
 		char tempAddrA[20];
 		memset(tempAddrA, '\0', 20);
-		strcpy(tempAddrA, getTierAddr(q));
-		freeGetTierAddr();
+		strcpy(tempAddrA, getTierAddr(q)); //copy the qth tier address to tempAddrA
+		freeGetTierAddr(); //free the tier address field
 
 		//printf("TEST: (helloM_List) ctrl packet - tempAddrA : %s  \n",
 		//		tempAddrA);
@@ -220,12 +226,14 @@ int _get_MACTest(struct addr_tuple *myAddr, int numTierAddr) {
 	}
 
 	// Send should initiate before receive
-	setInterfaces();
+	setInterfaces(); //interfaceList is being set by this function
 
 	int loopCounter1 = 0;
+
+	//this for loop sends the control message as well as keeps track of the no of control messages sent
 	for (; loopCounter1 < interfaceListSize; loopCounter1++) {
-		ctrlSend(interfaceList[loopCounter1], ctrlPayLoadA);
-		MPLRCtrlSendCount++;
+		ctrlSend(interfaceList[loopCounter1], ctrlPayLoadA); //ctrlSend method is used to send Ethernet frame
+		MPLRCtrlSendCount++; //keeps track of the no of control messages sent
 	}
 	MPLRCtrlSendRound++;
 
@@ -254,11 +262,12 @@ int _get_MACTest(struct addr_tuple *myAddr, int numTierAddr) {
 			checkForLinkFailures(myAddr, numTierAddr);
 			// if we have new failed IPS Advertise.
 			if (failedEndIPs_head != NULL) {
-				setInterfaces();
+				setInterfaces(); //interfaceList is being set by this function
 				int loopCounter2 = 0;
 				uint8_t *mplrPayload = allocate_ustrmem (IP_MAXPACKET);
 				int mplrPayloadLen = 0;
-				mplrPayloadLen = buildPayloadRemoveAdvts(mplrPayload, failedEndIPs_head);
+				//buildPayloadRemoveAdvbuildPayloadRemoveAdvtsts 
+				mplrPayloadLen = buildPayloadRemoveAdvts(mplrPayload, failedEndIPs_head); 
 				if (mplrPayloadLen) {
 					for (; loopCounter2 < interfaceListSize; loopCounter2++) {
 						// MPLR TYPE 5.
@@ -272,9 +281,10 @@ int _get_MACTest(struct addr_tuple *myAddr, int numTierAddr) {
 			}
 		}
 
-        // check if there are entries to be advertised.
+                // check if there are entries to be advertised.
         checkEntriesToAdvertise();
-
+ 
+ 		//Send hello packets after every 10 seconds
 		if (timeDiff >= 10) {
 
 			// test to print tier IP entries
@@ -311,21 +321,21 @@ int _get_MACTest(struct addr_tuple *myAddr, int numTierAddr) {
 			}
 
 			// Send on multiple interface in a loop
-			setInterfaces();
+			setInterfaces(); //interfaceList is being set by this function
 
 			int loopCounter2 = 0;
 
 			for (; loopCounter2 < interfaceListSize; loopCounter2++) {
 
-				ctrlSend(interfaceList[loopCounter2], ctrlPayLoadB);
+				ctrlSend(interfaceList[loopCounter2], ctrlPayLoadB); //send control messages
 				MPLRCtrlSendCount++;
 
 			}
 
-			delete();
+			delete(); //free the memory allocated
 
-			time0 = time(0);
-			freeInterfaces();
+			time0 = time(0); //reset time0
+			freeInterfaces(); //
 			interfaceListSize = 0;
 			MPLRCtrlSendRound++;
 			//printf("TEST: Inside timeDiff block sendCount: %lld\n",
@@ -337,19 +347,19 @@ int _get_MACTest(struct addr_tuple *myAddr, int numTierAddr) {
 
         // Recieve messages from the IP socket created.
 		nIP = recvfrom(sockIP, bufferIP, 2048, MSG_DONTWAIT,
-				(struct sockaddr*) &src_addrIP, &addr_lenIP);
+				(struct sockaddr*) &src_addrIP, &addr_lenIP); //inbuilt function to recieve information from socket. If there is any message in socket, we recieve a avalue greater than -1 and if there is no message, -1 will be returned.
 
         // if no messages are available in the IP socket.
 		if (nIP == -1) {
-			flagIP = 1;
+			flagIP = 1; //if no message is there in socket, nIP is -1 and flagIP is set to 1
 		}
 
         // if some messages are available in the IP socket.
-		if (flagIP == 0) {
+		if (flagIP == 0) { //if message is recived from socket flagIP remains 0 and we enter the loop
 
 			unsigned int tcIP = src_addrIP.sll_ifindex;
 
-			if_indextoname(tcIP, recvOnEtherPortIP);
+			if_indextoname(tcIP, recvOnEtherPortIP); //if_indextoname() function returns the name of the network interface corresponding to the interface index ifindex
 
 			// Fix for GENI , Ignoring messages from control interface
 			char* ctrlInterface = "eth0";
@@ -361,7 +371,7 @@ int _get_MACTest(struct addr_tuple *myAddr, int numTierAddr) {
 
 			//printf("\n (strcmp(recvOnEtherPortIP, ctrlInterface))= %d \n",strcmp(recvOnEtherPortIP, ctrlInterface));
 
-			if (strcmp(recvOnEtherPortIP, ctrlInterface) == 0) {
+			if (strcmp(recvOnEtherPortIP, ctrlInterface) == 0) { //eth0 is the control interface. We do not need process any messages on eth0
 				//printf("\n The message is from control interface. Hence Ignoring...");
 				continue;
 			}
@@ -373,11 +383,15 @@ int _get_MACTest(struct addr_tuple *myAddr, int numTierAddr) {
 						!= 0)) {
 
 					ipReceivedCount++;
-
-					printf("TEST: IP Packet Received \n");
-
-					printf("\n");
-
+					if(enableLogScreen){
+						printf("TEST: IP Packet Received \n");
+						printf("\n");
+					}
+					if(enableLogFiles){
+						fprintf(fptr,"TEST: IP Packet Received \n");
+						fprintf(fptr,"\n");
+					}
+					
 					unsigned char *ipHeadWithPayload;
 					int ipPacketSize = nIP - 14;
 					ipHeadWithPayload = (unsigned char*) malloc(ipPacketSize);
@@ -385,14 +399,17 @@ int _get_MACTest(struct addr_tuple *myAddr, int numTierAddr) {
 					memcpy(ipHeadWithPayload, &bufferIP[14], ipPacketSize);
 
 					//printf("\n");
-					setInterfaces();
+					setInterfaces(); //interfaceList is being set by this function
 
 					unsigned char ipDestTemp[7];
 					memset(ipDestTemp, '\0', 7);
 					sprintf(ipDestTemp, "%u.%u.%u.%u", ipHeadWithPayload[16],
 							ipHeadWithPayload[17], ipHeadWithPayload[18],
 							ipHeadWithPayload[19]);
-					printf("IP Destination : %s  \n", ipDestTemp);
+					if(enableLogScreen)
+						printf("IP Destination : %s  \n", ipDestTemp);
+					if(enableLogFiles)
+						fprintf(fptr,"IP Destination : %s  \n", ipDestTemp);
 
 	
 					unsigned char ipSourceTemp[7];
@@ -400,53 +417,84 @@ int _get_MACTest(struct addr_tuple *myAddr, int numTierAddr) {
 					sprintf(ipSourceTemp, "%u.%u.%u.%u", ipHeadWithPayload[12],
 							ipHeadWithPayload[13], ipHeadWithPayload[14],
 							ipHeadWithPayload[15]);
-					printf("IP Source  : %s  \n", ipSourceTemp);
+					if(enableLogScreen)
+						printf("IP Source  : %s  \n", ipSourceTemp);
+					if(enableLogFiles)
+						fprintf(fptr,"IP Source  : %s  \n", ipSourceTemp);
 
-					
-					printf("Calling Forwarding Algorithm - DataSend\n");
+					if(enableLogScreen)
+						printf("Calling Forwarding Algorithm - DataSend\n");
+					if(enableLogFiles)
+						fprintf(fptr,"Calling Forwarding Algorithm - DataSend\n");
 
 					int packetFwdStatus = -1;
 
 					if (isTierSet() == 0) {
-						printf("%s: isTierSet() == 0",__FUNCTION__);
+						if(enableLogScreen)
+							printf("%s: isTierSet() == 0",__FUNCTION__);
+						if(enableLogFiles)
+							fprintf(fptr,"%s: isTierSet() == 0",__FUNCTION__);
+
 						boolean checkDestStatus =
 								updateEndDestinationTierAddrHC(ipDestTemp);
 
 						if (checkDestStatus == false) {
 							errorCount++;
-							printf("ERROR: End destination tier address not available \n");
+							if(enableLogScreen)
+								printf("ERROR: End destination tier address not available \n");
+							if(enableLogFiles)
+								fprintf(fptr,"ERROR: End destination tier address not available \n");
 						}
 
                         printf("\n Calling packetForwardAlgorithm linenumber =%d",__LINE__);
 						packetFwdStatus = packetForwardAlgorithm(tierAddress,
-								tierDest);
+								tierDest); //forward the packets using packetforwarding algorithm
 
 					} else {
-						printf("ERROR: Tier info was not set \n");
-                        printf("\n Calling packetForwardAlgorithm linenumber =%d",__LINE__);
+						if(enableLogScreen)
+							printf("ERROR: Tier info was not set \n");
+						if(enableLogFiles)
+							fprintf(fptr,"ERROR: Tier info was not set \n");
+
 						packetFwdStatus = packetForwardAlgorithm(tierAddress,
-								tierDest);
+								tierDest);//forward the packets using packetforwarding algorithm
 
 					}
+					if(enableLogScreen)
+						printf("%s: packetFwdStatus = %d \n",__FUNCTION__,packetFwdStatus);
+					if(enableLogFiles)
+						fprintf(fptr,"%s: packetFwdStatus = %d \n",__FUNCTION__,packetFwdStatus);
 
-					printf("%s: packetFwdStatus = %d \n",__FUNCTION__,packetFwdStatus);
+					if (packetFwdStatus == 0) { //if we are able to move forward, get inside the loop
+						if(enableLogScreen)
+							printf("%s: packetFwdStatus == 0",__FUNCTION__);
+						if(enableLogFiles)
+							fprintf(fptr,"%s: packetFwdStatus == 0",__FUNCTION__);
 
-					if (packetFwdStatus == 0) {
-						printf("%s: packetFwdStatus == 0",__FUNCTION__);
 						if ((strlen(fwdTierAddr) == strlen(tierAddress))
 								&& (strcmp(fwdTierAddr, tierAddress) == 0)) {
-
-							printf("TEST: Received IP packet -(it's for me only, no forwarding needed) \n");
+							if(enableLogScreen)
+								printf("TEST: Received IP packet -(it's for me only, no forwarding needed) \n");
+							if(enableLogFiles)
+								fprintf(fptr,"TEST: Received IP packet -(it's for me only, no forwarding needed) \n");
 
 						} else {
-							printf("TEST: Recieved IP packet is not for me \n");
+							if(enableLogScreen)
+								printf("TEST: Recieved IP packet is not for me \n");
+							if(enableLogFiles)
+								fprintf(fptr,"TEST: Recieved IP packet is not for me \n");
 
 							if (isFWDFieldsSet() == 0) {
-
-								printf("TEST: Forwarding IP Packet as MPLR Data Packet (Encapsulation) \n");
-								printf("TEST: Sending on interface: %s \n",fwdInterface);
+								if(enableLogScreen){
+									printf("TEST: Forwarding IP Packet as MNLR Data Packet (Encapsulation) \n");
+									printf("TEST: Sending on interface: %s \n",fwdInterface);
+								}
+								if(enableLogFiles){
+									fprintf(fptr,"TEST: Forwarding IP Packet as MNLR Data Packet (Encapsulation) \n");
+									fprintf(fptr,"TEST: Sending on interface: %s \n",fwdInterface);
+								}
 								dataSend(fwdInterface, ipHeadWithPayload,
-										tierDest, tierAddress, ipPacketSize);
+										tierDest, tierAddress, ipPacketSize); //send the data
 
 								MPLRDataSendCount++;
 							}
@@ -460,9 +508,14 @@ int _get_MACTest(struct addr_tuple *myAddr, int numTierAddr) {
 			} else {
 				ipReceivedCount++;
 
-				printf("TEST: IP Packet Received \n");
-
-				printf("\n");
+				if(enableLogScreen){
+					printf("TEST: IP Packet Received \n");
+					printf("\n");
+				}
+				if(enableLogFiles){
+					fprintf(fptr,"TEST: IP Packet Received \n");
+					fprintf(fptr,"\n");
+				}
 
 				unsigned char *ipHeadWithPayload;
 				int ipPacketSize = nIP - 14;
@@ -470,27 +523,37 @@ int _get_MACTest(struct addr_tuple *myAddr, int numTierAddr) {
 				memset(ipHeadWithPayload, '\0', ipPacketSize);
 				memcpy(ipHeadWithPayload, &bufferIP[14], ipPacketSize);
 
-				printf("\n");
+				if(enableLogScreen)
+					printf("\n");
+				if(enableLogFiles)
+					fprintf(fptr,"\n");
 
-				setInterfaces();
+				setInterfaces(); //interfaceList is being set by this function
 
 
 				unsigned char ipDestTemp[7];
 				sprintf(ipDestTemp, "%u.%u.%u.%u", ipHeadWithPayload[16],
 						ipHeadWithPayload[17], ipHeadWithPayload[18],
 						ipHeadWithPayload[19]);
-				printf("[2]IP Destination : %s  \n", ipDestTemp);
+				if(enableLogScreen)
+					printf("[2]IP Destination : %s  \n", ipDestTemp);
+				if(enableLogFiles)
+					fprintf(fptr,"[2]IP Destination : %s  \n", ipDestTemp);
  				
 				 unsigned char ipSourceTemp[7];
                                  memset(ipSourceTemp, '\0', 7);
                                  sprintf(ipSourceTemp, "%u.%u.%u.%u", ipHeadWithPayload[12],
                                                         ipHeadWithPayload[13], ipHeadWithPayload[14],
                                                         ipHeadWithPayload[15]);
-                                 printf("IP Source  : %s  \n", ipSourceTemp);
+                                 if(enableLogFiles)
+                                 	printf("IP Source  : %s  \n", ipSourceTemp);
+                                 if(enableLogFiles)
+									fprintf(fptr,"IP Source  : %s  \n", ipSourceTemp);
 
-		
-
-				printf("Calling Forwarding Algorithm - DataSend\n");
+				if(enableLogScreen)
+					printf("Calling Forwarding Algorithm - DataSend\n");
+				if(enableLogFiles)
+					fprintf(fptr,"Calling Forwarding Algorithm - DataSend\n");
 
 				// TESTING FWD ALGORITHM 2 - Case: IP Packet Received, Control Interface not set
 
@@ -503,14 +566,20 @@ int _get_MACTest(struct addr_tuple *myAddr, int numTierAddr) {
 
 					if (checkDestStatus == false) {
 						errorCount++;
-						printf("ERROR: End destination tier address not available \n");
+						if(enableLogScreen)
+							printf("ERROR: End destination tier address not available \n");
+						if(enableLogFiles)
+							fprintf(fptr,"ERROR: End destination tier address not available \n");
 					}
                     printf("\n Calling packetForwardAlgorithm linenumber =%d",__LINE__);
 					packetFwdStatus = packetForwardAlgorithm(tierAddress,
 							tierDest);
 
 				} else {
-					printf("ERROR: Tier info was not set\n");
+					if(enableLogScreen)
+						printf("ERROR: Tier info was not set\n");
+					if(enableLogFiles)
+						fprintf(fptr,"ERROR: Tier info was not set\n");
                     printf("\n Calling packetForwardAlgorithm linenumber =%d",__LINE__);
 					packetFwdStatus = packetForwardAlgorithm(tierAddress,
 							tierDest);
@@ -522,14 +591,22 @@ int _get_MACTest(struct addr_tuple *myAddr, int numTierAddr) {
 					if ((strlen(fwdTierAddr) == strlen(tierAddress))
 							&& (strcmp(fwdTierAddr, tierAddress) == 0)) {
 
-						printf("TEST: Received IP packet -(it's for me only, no forwarding needed) \n");
+						if(enableLogScreen)
+							printf("TEST: Received IP packet -(it's for me only, no forwarding needed) \n");
+						if(enableLogFiles)
+							fprintf(fptr,"TEST: Received IP packet -(it's for me only, no forwarding needed) \n");
 
 					} else {
 
 						if (isFWDFieldsSet() == 0) {
-
-							printf("TEST: Forwarding IP Packet as MPLR Data Packet (Encapsulation) \n");
-							printf("Sending on interface: %s \n", fwdInterface);
+							if(enableLogScreen){
+								printf("TEST: Forwarding IP Packet as MNLR Data Packet (Encapsulation) \n");
+								printf("Sending on interface: %s \n", fwdInterface);
+							}	
+							if(enableLogFiles){
+								fprintf(fptr,"TEST: Forwarding IP Packet as MNLR Data Packet (Encapsulation) \n");
+								fprintf(fptr,"Sending on interface: %s \n", fwdInterface);
+							}
 							dataSend(fwdInterface, ipHeadWithPayload, tierDest,
 									tierAddress, ipPacketSize);
 
@@ -549,7 +626,7 @@ int _get_MACTest(struct addr_tuple *myAddr, int numTierAddr) {
 
         // Receive messages from the control socket.
 		n = recvfrom(sock, buffer, 2048, MSG_DONTWAIT,
-				(struct sockaddr*) &src_addr, &addr_len);
+				(struct sockaddr*) &src_addr, &addr_len); //recvfrom - receive a message from a socket
 
         if (n == -1) {
             //printf("\n No messages in the control socket. Time out!");
@@ -561,7 +638,7 @@ int _get_MACTest(struct addr_tuple *myAddr, int numTierAddr) {
 
 			unsigned int tc = src_addr.sll_ifindex;
 
-			if_indextoname(tc, recvOnEtherPort);
+			if_indextoname(tc, recvOnEtherPort); //mappings between network interface names and indexes
 
             printf("\n Control message recvd from %s",recvOnEtherPort);
 
@@ -656,7 +733,7 @@ int _get_MACTest(struct addr_tuple *myAddr, int numTierAddr) {
 
                                     if (mplrPayloadLen) {
                                         endNetworkSend(recvOnEtherPort, mplrPayload,
-                                                       mplrPayloadLen);
+                                                       mplrPayloadLen); //method to send MSG TYPE V 
                                         //                                    printf("\n CHeck - recvOnEtherPort=%s",recvOnEtherPort);
                                     }
                                     free(mplrPayload);
@@ -680,6 +757,7 @@ int _get_MACTest(struct addr_tuple *myAddr, int numTierAddr) {
 
 				if (checkMSGType == 2) {
 
+					//printf("\n");
 					printf("\n MNLR Data Message received checkMSGType=%d\n",checkMSGType);
 					MPLRDataReceivedCount++;
 					MPLROtherReceivedCount--;
@@ -688,12 +766,12 @@ int _get_MACTest(struct addr_tuple *myAddr, int numTierAddr) {
 					// (below line) to be implemented properly
 					//printMPLRPacketDetails(abc,xyz);
 
-					printf("Printing full MPLR Data packet \n");
+					printf("Printing full MNLR Data packet \n");
 
 					int j = 0;
 					for (; j < n - 14; j++) {
                         //	Printing MPLR Data Packet
-					   // printf("MPLR Content : %d : %02x  \n", j,buffer[j] & 0xff);
+					   // printf("MNLR Content : %d : %02x  \n", j,buffer[j] & 0xff);
 					}
 
 					//printf("\n");
@@ -948,7 +1026,7 @@ int _get_MACTest(struct addr_tuple *myAddr, int numTierAddr) {
 						for (z = 14; z < index; z++, mplrPayloadLen++) {
 							mplrPayload[mplrPayloadLen] = ethhead[z];
 						}
-						setInterfaces();
+						setInterfaces(); //interfaceList is being set by this function
 
 						if (mplrPayloadLen) {
 
@@ -1176,7 +1254,7 @@ int pingHello() {
 }
 
 /**
- * setInterfaces()
+ * setInterfaces() //interfaceList is being set by this function
  *
  * method to set active interfaces in a interfaceList
  *
@@ -1193,7 +1271,9 @@ int setInterfaces() {
 	int countInterface = 0;
 	char temp[20];
 
-	if (getifaddrs(&ifaddr) == -1) {
+	if (getifaddrs(&ifaddr) == -1) { /*The getifaddrs() function creates a linked list of structures
+       describing the network interfaces of the local system, and stores the
+       address of the first item of the list in *ifap.*/
 		errorCount++;
 		perror("ERROR: getifaddrs");
 		exit(EXIT_FAILURE);
@@ -1283,20 +1363,27 @@ int freeInterfaces() {
  *  EntryPoint - main()
  */
 int main(int argc, char **argv) {
-
-	char *tierAddr[20];
-	char *ipAddress[16];
-	int cidrs[100] = { 0 };
-	char *portName[10];
+/*The 2 arguments are argc, which is the no of arguments and argv consists of the arguments
+an example of an argument (argv) is ./run -T 2.1.2 -N 0 10.10.5.2 24 eth1. 7 components are present in this argument
+1) -T - stands for tier label 2)2.1.2 - tier label address 3)-N - stands for Node 4)0 - 0 specifies edge node and 1 specifies non edge node
+5)10.10.5.2 - ip address of the ip node 6)24 - subnet mask 7)eth1 - interface through which the ip node is connected to edge node. 
+*/
+//The argument comes as a single string. we need to split and save them to following variables
+	char *tierAddr[20]; //this character array store the tier address 
+	char *ipAddress[16]; //this character array store the ip address of ip node
+	int cidrs[100] = { 0 }; //subnet mask eg: 24
+	char *portName[10]; //interface no or port no eg : \eth0
+	
+	//The argument comes as a pointer of pointers. we need to split and save them to following variables
 	int endNWCount = 0;
 	int numActiveEndIPs = 0;
 	struct in_addr ips[100];
 	boolean tierSpecial = false;
 
 	// RVP For Logging purpose
-	char* filename = "./testLogs.txt";
+	char* filename = "./testLogs.txt"; //The filename to which logs is being saved.
 	fptr = fopen(filename,"w");
-	if(enableLogsFile) fprintf(fptr," Writing logs to file ... ");
+	if(enableLogFiles) fprintf(fptr," Writing logs to file ... ");
 	fflush(fptr); 
 
 	// Checking for the validity of the arguments
@@ -1308,13 +1395,17 @@ int main(int argc, char **argv) {
    // printf("\n argv[0]= %s",argv[0] );
 
 
-	if (argc > 1) {
+	if (argc > 1) { //if the number of arguments is greater than 1, we will go forward
 
-		argc--;
-		argv++;
-		while (argc > 0) {
-			char *opt = argv[0];
-			if (opt[0] != '-') {
+		argc--; //decrement the counter
+		argv++; //increment the memory location. first value in argv is "./run". now we incremented to "-T"
+		while (argc > 0) { //the loop will continue until the number of arguments is greater than 1. 
+			//We decrement the argc by 1 each time we process an element present in argv 
+
+			char *opt = argv[0]; //declare a pointer and assign the first pointer in "argv" to "opt". {*argv = argv[0]}. "-T"  assigned to opt
+
+			if (opt[0] != '-') { //We will check for first element in "-T". If the first element is not a "-", then this means the opt does not contain "-T", then we will exit the while loop. It should start with -T.... etc
+
 				break;
 			}
 			opt = argv[0];
@@ -1324,8 +1415,8 @@ int main(int argc, char **argv) {
 				argc--;
 				argv++;
 				myTierValue = convertStringToInteger(argv[0]);
-				argc--;
-				argv++;
+				argc--; //argument counter decremented 
+				argv++; // moved to next srting after "-T". In our example it will be "2.1.2"
 			}
 			else{
 				printf(" Error : Invalid Argument , Tier Value is not passed ");
@@ -1357,11 +1448,11 @@ int main(int argc, char **argv) {
 						}
 						/* For Default tier address */
 						if (tierSpecial == false) {
-							setTierInfo(next);
-							tierSpecial = true;
+							setTierInfo(next); //function to set the tier address of the node. we are passing the tier label address(eg 2.1.2) as the argument.
+							tierSpecial = true; //once we set the tier address for that node, we update the tierSpecial flag as 1.
 						}
 						// pass it to tier address list
-						insertTierAddr(next);
+						insertTierAddr(next); //each node can have many tier label since it may derive from more than one parent node. All the values are stored in a list.
 						tierAddr[initA] = malloc(1 + strlen(next));
 						strcpy(tierAddr[initA], next);
 						initA++;
@@ -1381,16 +1472,16 @@ int main(int argc, char **argv) {
 					argc--;
 					argv++;
 					//printf("-N Detected \n");
-					int edgeNode = atoi(argv[0]);
+					int edgeNode = atoi(argv[0]); //atoi converts string to integer. Here we checks what comes after the -N (0 or 1 comes after -N. 0 represent edge not and 1 represents not an edge node)
 					int initB = 0;
 					argc--;
 					argv++;
-					if (edgeNode == 0) {
+					if (edgeNode == 0) { //if 0 comes aftrer -N, we are having an edge node and we enter this loop
 						// Edge Node
-						endNode = 0;
+						endNode = 0; //endNode is updated to 0, if we are at edge node
 						int iterationNCount = 0;
 						do {
-							char *nextN = argv[0];
+							char *nextN = argv[0]; //here the ipaddress is stored in the pointer
 							//printf("Before : %s  \n", nextN);
 							if (nextN[0] == '-') {
 								if (iterationNCount == 0) {
@@ -1401,12 +1492,12 @@ int main(int argc, char **argv) {
 							}
 							
 							// pass it to other - IP
-							ipAddress[initB] = malloc(1 + strlen(nextN));
-							strcpy(ipAddress[initB], nextN);
+							ipAddress[initB] = malloc(1 + strlen(nextN)); //allocate memory for the ipaddress[initB]
+							strcpy(ipAddress[initB], nextN); //copy the ipaddress of the ip node to ipaddress[initB]
 							argc--;
 							argv++;
 
-							char *nextN2 = argv[0];
+							char *nextN2 = argv[0]; //here the subnet mask is saved to the pointer 
 							//printf("Before : %s  \n", nextN2);
 							if (nextN2[0] == '-') {
 								totalIPError++;
@@ -1416,11 +1507,11 @@ int main(int argc, char **argv) {
 
 							//printf("CIDR : %s  \n", nextN2);
 							// pass it to other - CIDR
-							cidrs[initB] = atoi(nextN2);
+							cidrs[initB] = atoi(nextN2); //convert the subnet mask to integer and store in cidrs[initB]
 							argc--;
 							argv++;
 
-							char *nextN3 = argv[0];
+							char *nextN3 = argv[0]; //interface is saved in the pointer
 							//printf("Before : %s  \n", nextN3);
 							if (nextN3[0] == '-') {
 								totalIPError++;
@@ -1430,8 +1521,8 @@ int main(int argc, char **argv) {
 
 							//printf("Port Name : %s  \n", nextN3);
 							// pass it to other - Port name
-							portName[initB] = malloc(1 + strlen(nextN3));
-							strcpy(portName[initB], nextN3);
+							portName[initB] = malloc(1 + strlen(nextN3)); //allocate memory for portName[initB]
+							strcpy(portName[initB], nextN3); //copy the interface to portName[initB]
 							initB++;
 							endNWCount++;
 							argc--;
@@ -1469,7 +1560,7 @@ int main(int argc, char **argv) {
 				opt = argv[0];
 				if (!(strcmp(opt, "-V") == 0) && !(strcmp(opt, "-version") == 0)
 				&& !(strcmp(opt, "-T") == 0)
-				&& !(strcmp(opt, "-N") == 0)) 
+				&& !(strcmp(opt, "-N") == 0))  //if -N or -V or -version or -T does not come after label address of node, then it is an error. 
 				{
 					argc--;
 					argv++;
@@ -1479,7 +1570,8 @@ int main(int argc, char **argv) {
 			}
 
 		}
-	} else {
+	} else { //if argc <=0 then error
+
 		totalIPError++;
 		printf("ERROR: Not enough parameters \n");
 		exit(0);
@@ -1493,10 +1585,10 @@ int main(int argc, char **argv) {
 	int z = 0;
 	for (z = 0; z < endNWCount; z++) {
 		//printf("T->%s cidr %d\n", ipAddress[z], cidrs[z]);
-		inet_pton(AF_INET, ipAddress[z], &ips[z]);
-		ips[z].s_addr = ntohl(ips[z].s_addr);
-		ips[z].s_addr = ((ips[z].s_addr >> (32 - cidrs[z])) << (32 - cidrs[z]));
-		ips[z].s_addr = htonl(ips[z].s_addr);
+		inet_pton(AF_INET, ipAddress[z], &ips[z]); //inet_pton convert ipaddress from text to binary. ips[z] will have the binary form of the ip address stored as text in ipaddress[z]
+		ips[z].s_addr = ntohl(ips[z].s_addr); //The ntohl() function converts the unsigned integer netlong from network byte order to host byte order.
+		ips[z].s_addr = ((ips[z].s_addr >> (32 - cidrs[z])) << (32 - cidrs[z])); //remove the last element from ipaddress. eg 10.10.5.2 will change to 10.10.5.0. we are finding the network address from the host address.
+		ips[z].s_addr = htonl(ips[z].s_addr); //The htonl() function converts the unsigned integer hostlong from host byte order to network byte order.
 	}
 
     if(myTierValue != 1) {
@@ -1509,7 +1601,7 @@ int main(int argc, char **argv) {
 	// Table -> myAddr
 	// Tier address , IP address 
 	// 
-	if (endNode == 0) {
+	if (endNode == 0) { //endNode is updated to 0, if we are at edge node, ie if edgeNode is 0
 		struct addr_tuple myAddr[endNWCount * (myTotalTierAddress)];
 		//printf("T0->%d ->%d\n", endNWCount, myTotalTierAddress);
 
@@ -1653,7 +1745,7 @@ char *strrmc(char *str, char ch) {
 	*to = '\0';
 	return str;
 }
-
+/*function to update the end tier address*/
 boolean updateEndDestinationTierAddrHC(char tempIP[]) {
 
 	boolean updateStatus = false;
@@ -1730,7 +1822,7 @@ int packetStats() {
 }
 
 void checkEntriesToAdvertise() {
-        setInterfaces();
+        setInterfaces(); //interfaceList is being set by this function
         int ifs = 0;
         // Whenever there is an update we have to advertise it to others.
         for (; ifs < interfaceListSize; ifs++) {
@@ -1751,7 +1843,9 @@ void checkEntriesToAdvertise() {
         // Mark new entries as old now.
         clearEntryState();
 }
-
+/*
+This function is used to populate the failed IP's to the variable "failedEndIPs_head". addr_tuple is being populated by the active interfaces.
+*/
 void checkForLinkFailures (struct addr_tuple *myAddr, int numTierAddr) {
         // Failed End Links IPS
 
@@ -1823,14 +1917,20 @@ void checkForLinkFailures (struct addr_tuple *myAddr, int numTierAddr) {
         }
 
 }
-
+/*
+This funtion is used to find all interfaces in a node and check whether interfaces are active
+*/
 bool isInterfaceActive(struct in_addr ip, int cidr) {
         // find all interfaces on the node.
         struct ifaddrs *ifaddr, *ifa;
 
-        if (getifaddrs(&ifaddr)) {
+        if (getifaddrs(&ifaddr)) { /* The getifaddrs() function creates a linked list of structures describing the network interfaces of the local system, and stores the address of the first item of the list in *ifap. */
                 perror("Error: getifaddrs() Failed\n");
-                printf("Is Interface Active\n");
+				if(enableLogScreen)
+					printf("Is Interface Active\n");
+                if(enableLogFiles)
+					fprintf(fptr,"Is Interface Active\n");
+                
 		exit(0);
         }
 

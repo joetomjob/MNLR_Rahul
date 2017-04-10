@@ -43,6 +43,10 @@ void toString(char str[], int num);
 void getStringByDot(char strCheck[], int dotPosition, char dotString[]);
 void getStringByPositionAndLength(char strOrig[], char strMod[], int fromPos, int lengthReq);
 
+extern FILE *fptr;
+extern int enableLogScreen;
+extern int enableLogFiles;
+
 /**
  * getTierValue(char[])
  *
@@ -272,14 +276,20 @@ char *getParent(char *str, char ch) {
 
 		char subStr[10];
 		memset(subStr, '\0', 10);
-		getStringByDot(str, j + 1, subStr);
-		printf("4t - substr in for %s\n", subStr);
+		getStringByDot(str, j + 1, subStr);		
+		if(enableLogScreen)
+			printf("4t - substr in for %s\n", subStr);
+		if(enableLogFiles)
+			fprintf(fptr,"4t - substr in for %s\n", subStr);
 
 		strcat(realParent, ".");
 		strcat(realParent, subStr);
 
 	}
-	printf("5t - real parent after for %s\n", realParent);
+	if(enableLogScreen)
+		printf("5t - real parent after for %s\n", realParent);
+	if(enableLogFiles)
+		fprintf(fptr,"5t - real parent after for %s\n", realParent);
 
 	memset(str, '\0', strlen(str));
 	return realParent;
@@ -510,7 +520,10 @@ void getStringByPositionAndLength(char strOrig[], char strMod[], int fromPos, in
 		strMod[j] = '\0';
 
 	} else {
-		printf("ERROR: getStringByLengthAndPos() - invalid parameter values\n");
+		if(enableLogScreen)
+			printf("ERROR: getStringByLengthAndPos() - invalid parameter values\n");
+		if(enableLogFiles)
+			fprintf(fptr,"ERROR: getStringByLengthAndPos() - invalid parameter values\n");
 	}
 
 }

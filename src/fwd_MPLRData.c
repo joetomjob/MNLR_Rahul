@@ -1,6 +1,10 @@
 
 #include "sendAndFwd.h"
 
+extern FILE *fptr;
+extern int enableLogScreen;
+extern int enableLogFiles;
+
 int dataFwd(char etherPort[20], unsigned char MPLRPacket[], int MPLRPacketSize) {
 
 	int payLoad_Size = -1;
@@ -104,7 +108,10 @@ int dataFwd(char etherPort[20], unsigned char MPLRPacket[], int MPLRPacketSize) 
 	// Send packet
 	if (sendto(sockfd, frame, tx_len + payLoad_Size, 0,
 			(struct sockaddr*) &socket_address, sizeof(struct sockaddr_ll)) < 0)
-		printf("ERROR: Send failed\n");
+		if(enableLogScreen)
+			printf("ERROR: Send failed\n");
+		if(enableLogFiles)
+			fprintf(fptr,"ERROR: Send failed\n");
 
 	close(sockfd);
 	return 0;

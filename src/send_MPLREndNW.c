@@ -8,10 +8,14 @@
 
 #include "sendAndFwd.h"
 
+extern FILE *fptr;
+extern int enableLogScreen;
+extern int enableLogFiles;
+
 /**
  * mainSend(char[],char[])
  *
- * method to send MSG TYPE V
+ * method to send MSG TYPE V (Encapsulated IP Message)
  *
  * @param etherPort (char[]) - interface to send on
  * @param inPayLoad (char[]) - payLoad to be sent
@@ -105,7 +109,10 @@ int endNetworkSend(char etherPort[], uint8_t *inPayload, int payloadLen) {
 	// Send packet
 	if (sendto(sockfd, frame, frame_Size, 0, (struct sockaddr*) &socket_address,
 			sizeof(struct sockaddr_ll)) < 0)
-		printf("ERROR: Send failed\n");
+		if(enableLogScreen)
+			printf("ERROR: Send failed\n");
+		if(enableLogFiles)
+			fprintf(fptr,"ERROR: Send failed\n");
 
 	free(eh);
 	close(sockfd);

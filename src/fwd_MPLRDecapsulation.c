@@ -8,6 +8,7 @@
 
 #include "sendAndFwd.h"
 
+/*decapsulate the encapsulated message*/
 int dataDecapsulation(char etherPort[20], unsigned char MPLRDecapsPacket[],
 		int MPLRDecapsSize) {
 
@@ -145,7 +146,7 @@ int dataDecapsulation(char etherPort[20], unsigned char MPLRDecapsPacket[],
 
 	// Send packet (Decapsulation)
 	if (sendto(sockfd, frame, tx_len + payLoad_Size, 0,
-			(struct sockaddr*) &socket_address, sizeof(struct sockaddr_ll)) < 0)
+			(struct sockaddr*) &socket_address, sizeof(struct sockaddr_ll)) < 0) //send a message on a socket
 		//printf("ERROR: Send failed\n");
 
 	close(sockfd);

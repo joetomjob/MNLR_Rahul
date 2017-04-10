@@ -113,14 +113,14 @@ int isTierSet() {
 	return tierSet;
 }
 
-int setTierInfo(char tierValue[]) {
+int setTierInfo(char tierValue[]) { //function to set the tier address of the node. we are passing the tier label address(eg 2.1.2) as the argument.
 
-	int tierLength=strlen(tierValue);
+	int tierLength=strlen(tierValue); //length of tier value is calculated
 
-	tierAddress=(char *) malloc(tierLength);
-	memset (tierAddress,'\0',tierLength);
+	tierAddress=(char *) malloc(tierLength); //allocate memory to tierAddress variable. 
+	memset (tierAddress,'\0',tierLength); //set null character to the tierAddress
 
-	strcpy(tierAddress,tierValue);
+	strcpy(tierAddress,tierValue);//tierValue is copied to tierAddress
 
 	tierSet=0;
 

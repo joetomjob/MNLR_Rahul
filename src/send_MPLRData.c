@@ -8,6 +8,8 @@
 
 #include "sendAndFwd.h"
 
+extern void close(int );
+
 /**
  * dataSend(char[],char[])
  *

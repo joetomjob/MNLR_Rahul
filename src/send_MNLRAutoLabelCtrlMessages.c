@@ -1,5 +1,5 @@
 /*
- * send_MPLREndNW.c
+ * send_MPLRCtrl.c
  *
  *  Created on: Mar 06, 2015
  *  Updated on: Aug 12, 2015
@@ -8,22 +8,18 @@
 
 #include "sendAndFwd.h"
 
-extern FILE *fptr;
-extern int enableLogScreen;
-extern int enableLogFiles;
 extern void close(int );
-
 /**
  * mainSend(char[],char[])
  *
- * method to send MSG TYPE V (Encapsulated IP Message)
+ * method to send Ethernet frame
  *
  * @param etherPort (char[]) - interface to send on
  * @param inPayLoad (char[]) - payLoad to be sent
  *
  * @return status (int) - method return value
  */
-int endNetworkSend(char etherPort[], uint8_t *inPayload, int payloadLen) {
+int ctrlLabelSend(int messageType,char etherPort[], char inPayload[]) {
 
 	int payLoad_Size = -1;
 	int frame_Size = -1;
@@ -32,34 +28,64 @@ int endNetworkSend(char etherPort[], uint8_t *inPayload, int payloadLen) {
 	struct ifreq if_idx;
 	struct ifreq if_mac;
 
+	int tx_len = 0;
 	char ifName[IFNAMSIZ];
 
+	uint8_t header[HEADER_SIZE];
+	char temp_Payload[MAX_CTRL_PAYLD_SIZE];
+
+//    printf("\n ctrlSend : EtherPort = %s",etherPort);
+
+	//  Need to update
+	//	if (strlen(argv[2]) > 1000) {
+	//	memcpy(temp_Payload, argv[2], MAX_PAYLD_SIZE);
+
 	strcpy(ifName, etherPort);
-	frame_Size = HEADER_SIZE + payloadLen;
+	strcpy(temp_Payload, inPayload);
+
+	// Setting frame size
+	payLoad_Size = strlen(temp_Payload);
+	frame_Size = HEADER_SIZE + 1 + payLoad_Size;
+
+//	printf("\n TEST: ctrl frame size %d\n", frame_Size);
+
+	char payLoad[payLoad_Size];
+	memset(payLoad, '\0', payLoad_Size);
+	memcpy(payLoad, temp_Payload, payLoad_Size);
+
+//	printf("\n TEST: Payload size is %d\n ", payLoad_Size);
+//	printf("\n TEST: Frame size is %d\n ", frame_Size);
 
 	// creating frame
 	uint8_t frame[frame_Size];
+	memset(frame, '\0', frame_Size);
 
-	struct ether_header *eh = (struct ether_header*) calloc(1,
-			sizeof(struct ether_header));
-
+	struct ether_header *eh = (struct ether_header *) header;
 	struct sockaddr_ll socket_address;
 
 	// Open RAW socket to send on
 	if ((sockfd = socket(AF_PACKET, SOCK_RAW, IPPROTO_RAW)) == -1) {
 		perror("ERROR: Socket Error");
+		printf("\n ERROR: Socket Error");
+
 	}
 
 	memset(&if_idx, 0, sizeof(struct ifreq));
 	strncpy(if_idx.ifr_name, ifName, IFNAMSIZ - 1);
-	if (ioctl(sockfd, SIOCGIFINDEX, &if_idx) < 0)
+	if (ioctl(sockfd, SIOCGIFINDEX, &if_idx) < 0) {
 		perror("ERROR: SIOCGIFINDEX - Misprint Compatibility");
+		printf("\n ERROR: SIOCGIFINDEX - Misprint Compatibility");
+	}
 
 	memset(&if_mac, 0, sizeof(struct ifreq));
 	strncpy(if_mac.ifr_name, ifName, IFNAMSIZ - 1);
-	if (ioctl(sockfd, SIOCGIFHWADDR, &if_mac) < 0)
-		perror(
-				"ERROR: SIOCGIFHWADDR - Either interface is not correct or disconnected");
+	if (ioctl(sockfd, SIOCGIFHWADDR, &if_mac) < 0) {
+		perror("ERROR: SIOCGIFHWADDR - Either interface is not correct or disconnected");
+		printf("\n ERROR: SIOCGIFHWADDR - Either interface is not correct or disconnected");
+	}
+
+	// Initializing the Ethernet Header
+	memset(header, 0, HEADER_SIZE);
 
 	/*
 	 *  Ethernet Header - 14 bytes
@@ -86,12 +112,19 @@ int endNetworkSend(char etherPort[], uint8_t *inPayload, int payloadLen) {
 
 	eh->ether_type = htons(0x8850);
 
-	// Copying header to frame
-	memcpy(frame, eh, sizeof(struct ether_header));
+	tx_len += sizeof(struct ether_header);
 
-	// Copying Payload (No. of tier addr + x times (tier addr length + tier addr) )
+	// Copying header to frame
+	memcpy(frame, header, 14);
+
+	// Copying message type to frame
+	uint8_t msgCtrl = messageType;
+	memcpy(frame + 14, &msgCtrl, 1);
+
+	// Copying PayLoad (No. of tier addr + x times (tier addr length + tier addr) )
 	// Copying payLoad to frame
-	memcpy(frame + sizeof(struct ether_header), inPayload, payloadLen);
+	memcpy(frame + 15, payLoad, payLoad_Size);
+
 
 	// Index of the network device
 	socket_address.sll_ifindex = if_idx.ifr_ifindex;
@@ -107,15 +140,31 @@ int endNetworkSend(char etherPort[], uint8_t *inPayload, int payloadLen) {
 	socket_address.sll_addr[4] = MY_DEST_MAC4;
 	socket_address.sll_addr[5] = MY_DEST_MAC5;
 
-	// Send packet
-	if (sendto(sockfd, frame, frame_Size, 0, (struct sockaddr*) &socket_address,
-			sizeof(struct sockaddr_ll)) < 0)
-		if(enableLogScreen)
-			printf("ERROR: Send failed\n");
-		if(enableLogFiles)
-			fprintf(fptr,"ERROR: Send failed\n");
+	/*
 
-	free(eh);
+		 // For testing purpose
+
+		  int testIndex = 0;
+		  int testSize=0;
+		  testSize=tx_len + 1 + payLoad_Size;
+
+		for (; testIndex < testSize; testIndex++) {
+			printf("MPLR Ctrl Pack in send_MPLRCtrl.c %d : %02x \n ",testIndex ,frame[testIndex] & 0xff);
+		}
+		printf("\n");
+
+		printf("TEST: MPLRCTRLPacketSize size %d\n", testSize);
+
+
+	 */
+
+
+//	printf("TEST: Before sendto() - send_MPLRCtrl.c \n");
+	// Send packet
+	if (sendto(sockfd, frame, tx_len + 1 + payLoad_Size, 0,
+			(struct sockaddr*) &socket_address, sizeof(struct sockaddr_ll)) < 0)
+		printf("\n ERROR: Send failed\n");
+
 	close(sockfd);
 	return 0;
 }

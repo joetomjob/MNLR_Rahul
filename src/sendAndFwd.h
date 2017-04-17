@@ -39,6 +39,13 @@
 #define MESSAGE_TYPE_CTRL  1
 #define MESSAGE_TYPE_DATA  2
 #define MESSAGE_TYPE_ENDNW 5
+#define MESSAGE_TYPE_AUTOLABEL  6
+
+
+// Types newly added for auto assignment of labels
+#define MESSAGE_TYPE_JOIN  				7
+#define MESSAGE_TYPE_LABELS_AVAILABLE  	8
+#define MESSAGE_TYPE_LABELS_ACCEPTED  	9
 
 #define MESSAGE_TYPE_ENDNW_ADD	1
 #define MESSAGE_TYPE_ENDNW_REMOVE	2

@@ -30,6 +30,11 @@ extern int getUniqueChildIndex(char strCheck[]);
 extern void findParntLongst(char* myTierAdd,char* parentTierAdd);
 extern void printNeighbourTable();
 extern int examineNeighbourTable(char* desTierAdd,char* longstMatchingNgbr);
+extern  void findChildLongst(char* desTierAdd,char* childTierAdd);
+
+extern FILE *fptr;
+extern int enableLogScreen;
+extern int enableLogFiles;
 
 
 int packetForwardAlgorithm(char currentTier[], char desTier[]);
@@ -41,6 +46,9 @@ boolean algorithmOptimusG(char currentTier[], char desTier[],
 void getUID(char* curUID,char* currentTier);
 void formNextUIDtoTransferInCase3B(char* nextTierAddress,char* currentTierAddress,boolean cond);
 boolean checkIfDestUIDSubStringUID(char* destUID,char* myUID);
+int setNextTierToSendPacket(char* nodeAddress);
+int getTierVal(char* tierAdd);
+
 
 /**
  * packetForwardAlgorithm(char[],char[])
@@ -55,7 +63,10 @@ boolean checkIfDestUIDSubStringUID(char* destUID,char* myUID);
 int packetForwardAlgorithm(char myTierAdd[], char desTierAdd[]) 
 {
 
-	printf("\n\nEntering packetForwardAlgorithm \n");
+	if(enableLogScreen)
+		printf("\n\nEntering packetForwardAlgorithm \n");
+	if(enableLogFiles)
+		fprintf(fptr,"\n\nEntering packetForwardAlgorithm \n");
 
 	int returnValue = ERROR;
 	boolean checkOFA = false;
@@ -67,31 +78,46 @@ int packetForwardAlgorithm(char myTierAdd[], char desTierAdd[])
 	{
 
 		// Case:1 Current Tier  = Destination Tier
-		printf("Case:1 My Tier [%s] = Destination Tier [%s] \n",myTierAdd,desTierAdd);
+		if(enableLogScreen)
+			printf("Case:1 My Tier [%s] = Destination Tier [%s] \n",myTierAdd,desTierAdd);
+		if(enableLogFiles)
+			fprintf(fptr,"Case:1 My Tier [%s] = Destination Tier [%s] \n",myTierAdd,desTierAdd);
 		boolean checkIfFWDSet =setByTierManually(desTierAdd,true);
 
 		if (checkIfFWDSet == true)
 		{
-			printf("Packet send to the ipnode successfully"); 
+			if(enableLogScreen)
+				printf("Packet send to the ipnode successfully"); 
+			if(enableLogFiles)
+				fprintf(fptr,"Packet send to the ipnode successfully"); 
 			checkOFA = true;  
 			fwdSet = SUCCESS; 
 			returnValue = SUCCESS;
 		}
 		else
 		{
-			printf("Case:1:ERROR: Failed to set FWD Tier Address\n");
+			if(enableLogScreen)
+				printf("Case:1:ERROR: Failed to set FWD Tier Address\n");
+			if(enableLogFiles)
+				fprintf(fptr,"Case:1:ERROR: Failed to set FWD Tier Address\n");
 			fwdSet = ERROR;
 			returnValue = ERROR;
 		}
 	}
 	else 
 	{
-		printf("Case:1 [NOT TRUE]  My Tier [%s] = Destination Tier [%s] \n",myTierAdd,desTierAdd);
+		if(enableLogScreen)
+			printf("Case:1 [NOT TRUE]  My Tier [%s] = Destination Tier [%s] \n",myTierAdd,desTierAdd);
+		if(enableLogFiles)
+			fprintf(fptr,"Case:1 [NOT TRUE]  My Tier [%s] = Destination Tier [%s] \n",myTierAdd,desTierAdd);
 		// Check for Case 2 : if Destinaton label is in my neighbour table
 		if (containsTierAddress(desTierAdd) == true)
 		{
 			// Case2 : Destinaton label is in my neighbour table
-			printf("[TRUE] Case:2 Destinaton label is in my neighbour table \n");
+			if(enableLogScreen)
+				printf("[TRUE] Case:2 Destinaton label is in my neighbour table \n");
+			if(enableLogFiles)
+				fprintf(fptr,"[TRUE] Case:2 Destinaton label is in my neighbour table \n");
 
 			//Forward Packet to the port curresponding  to the Destination label
 			returnValue = setNextTierToSendPacket(desTierAdd);
@@ -99,7 +125,10 @@ int packetForwardAlgorithm(char myTierAdd[], char desTierAdd[])
 		}
 		else
 		{
- 			printf("[FALSE] Case:2 Destinaton label is in my neighbour table \n");
+			if(enableLogScreen)
+ 				printf("[FALSE] Case:2 Destinaton label is in my neighbour table \n");
+ 			if(enableLogFiles)
+				fprintf(fptr,"[FALSE] Case:2 Destinaton label is in my neighbour table \n");
 			int myTierValue =  getTierVal(myTierAdd);
 			int destTierValue = getTierVal(desTierAdd);
 			
@@ -107,23 +136,35 @@ int packetForwardAlgorithm(char myTierAdd[], char desTierAdd[])
 
 			if( (myTierValue == destTierValue) && (myTierValue != 1))
 			{
-				printf("Case:3 [TRUE] My Tier Value ==  Destination Tier Value && Tier Value !=1 \n");
+				if(enableLogScreen)
+					printf("Case:3 [TRUE] My Tier Value ==  Destination Tier Value && Tier Value !=1 \n");
+				if(enableLogFiles)
+					fprintf(fptr,"Case:3 [TRUE] My Tier Value ==  Destination Tier Value && Tier Value !=1 \n");
 				char*  parentTierAddress;
 				//	memset(parentTierAddress,'\0',20);
 				
 				char tempMyTierAddress[20];
 				memcpy(tempMyTierAddress,myTierAdd,strlen(myTierAdd)+1);
-				printf("Case:3 Trying to get the parent address from myTierAdd=%s \n",tempMyTierAddress);
+				if(enableLogScreen)
+					printf("Case:3 Trying to get the parent address from myTierAdd=%s \n",tempMyTierAddress);
+				if(enableLogFiles)
+					fprintf(fptr,"Case:3 Trying to get the parent address from myTierAdd=%s \n",tempMyTierAddress);
 				//trying to get the parent 
 				parentTierAddress = getParent(tempMyTierAddress,'.');
-				printf("Case:3 parentTierAddress=%s myTierAdd=%s \n",parentTierAddress,myTierAdd);
+				if(enableLogScreen)
+					printf("Case:3 parentTierAddress=%s myTierAdd=%s \n",parentTierAddress,myTierAdd);
+				if(enableLogFiles)
+					fprintf(fptr,"Case:3 parentTierAddress=%s myTierAdd=%s \n",parentTierAddress,myTierAdd);
 				
 				returnValue = setNextTierToSendPacket(parentTierAddress);
 			}
 			else
 			{
 			//Case4 and 5: 
-				printf("Case:3 [FALSE] My Tier Value =  Destination Tier Value && Tier Value !=1 \n");
+				if(enableLogScreen)
+					printf("Case:3 [FALSE] My Tier Value =  Destination Tier Value && Tier Value !=1 \n");
+				if(enableLogFiles)
+					fprintf(fptr,"Case:3 [FALSE] My Tier Value =  Destination Tier Value && Tier Value !=1 \n");
 
 				char destUID[20];
 				char myUID[20];
@@ -142,18 +183,30 @@ int packetForwardAlgorithm(char myTierAdd[], char desTierAdd[])
 					//case 4
 					if(myTierValue > destTierValue)
 					{
-						printf("\n Entered case 4");
+						if(enableLogScreen)
+							printf("\n Entered case 4");
+						if(enableLogFiles)
+							fprintf(fptr,"\n Entered case 4");
 						boolean check = checkIfDestUIDSubStringUID(destUID,myUID);
 
 						if(check == true)
 						{	
-							printf("\n checkIfDestUIDSubStringUID = TRUE");
-							printf("\n Sending packet to parent %s\n", parentTierAdd);
+							if(enableLogScreen){
+								printf("\n checkIfDestUIDSubStringUID = TRUE");
+								printf("\n Sending packet to parent %s\n", parentTierAdd);
+							}
+							if(enableLogFiles){
+								fprintf(fptr,"\n checkIfDestUIDSubStringUID = TRUE");
+								fprintf(fptr,"\n Sending packet to parent %s\n", parentTierAdd);
+							}
 							returnValue = setNextTierToSendPacket(parentTierAdd);
 						}
 						else
 						{
-							printf("\n checkIfDestUIDSubStringUID = FALSE");
+							if(enableLogScreen)
+								printf("\n checkIfDestUIDSubStringUID = FALSE");
+							if(enableLogFiles)
+								fprintf(fptr,"\n checkIfDestUIDSubStringUID = FALSE");
 							char longstMatchingNgbr[20];
 							memset(longstMatchingNgbr,'\0',20);
 
@@ -162,11 +215,17 @@ int packetForwardAlgorithm(char myTierAdd[], char desTierAdd[])
 							
 							//if not success , set the next node to my parent
 							if(isDestUIDSubNeigbUID != SUCCESS){
-								printf("\n Destination UID not a substring of any neighbour UID, setting the next address to parent address\n");
+								if(enableLogScreen)
+									printf("\n Destination UID not a substring of any neighbour UID, setting the next address to parent address\n");
+								if(enableLogFiles)
+									fprintf(fptr,"\n Destination UID not a substring of any neighbour UID, setting the next address to parent address\n");
 								strcpy(longstMatchingNgbr,parentTierAdd);
 							}
 							else{
-								printf("\n Sending the packet to the longest matching neighbour %s",longstMatchingNgbr);
+								if(enableLogScreen)
+									printf("\n Sending the packet to the longest matching neighbour %s",longstMatchingNgbr);
+								if(enableLogFiles)
+									fprintf(fptr,"\n Sending the packet to the longest matching neighbour %s",longstMatchingNgbr);
 							}
 							returnValue = setNextTierToSendPacket(longstMatchingNgbr);
 						}
@@ -174,12 +233,18 @@ int packetForwardAlgorithm(char myTierAdd[], char desTierAdd[])
 					//case 5
 					else 
 					{
-						printf("\n Entered case 5");	
+						if(enableLogScreen)
+							printf("\n Entered case 5");	
+						if(enableLogFiles)
+							fprintf(fptr,"\n Entered case 5");	
 						boolean check = checkIfDestUIDSubStringUID(destUID,myUID);
 
 						if(check == true)
 						{	
-							printf("Case 5 : Destination UID substring of my UID ");
+							if(enableLogScreen)
+								printf("Case 5 : Destination UID substring of my UID ");
+							if(enableLogFiles)
+								fprintf(fptr,"Case 5 : Destination UID substring of my UID ");
 							//Forward packet to my child with the longest substring match
 							char childTierAdd[20];
 							memset(childTierAdd,'\0',20);
@@ -187,13 +252,22 @@ int packetForwardAlgorithm(char myTierAdd[], char desTierAdd[])
 							printNeighbourTable();
 							findChildLongst(desTierAdd,childTierAdd);
 							
-							printf("\n checkIfDestUIDSubStringUID = TRUE \n");
-							printf("\n Sending the packet to longest child -%s\n",childTierAdd);
+							if(enableLogScreen){
+								printf("\n checkIfDestUIDSubStringUID = TRUE \n");
+								printf("\n Sending the packet to longest child -%s\n",childTierAdd);
+							}
+							if(enableLogFiles){
+								fprintf(fptr,"\n checkIfDestUIDSubStringUID = TRUE \n");
+								fprintf(fptr,"\n Sending the packet to longest child -%s\n",childTierAdd);
+							}
 							returnValue = setNextTierToSendPacket(childTierAdd);
 						}
 						else
 						{
-   							printf("Case 5 : Destination UID not a substring of my UID , sending to longest Matching Neighbour\n");
+							if(enableLogScreen)
+   								printf("Case 5 : Destination UID not a substring of my UID , sending to longest Matching Neighbour\n");
+							if(enableLogFiles)
+   								fprintf(fptr,"Case 5 : Destination UID not a substring of my UID , sending to longest Matching Neighbour\n");
 							char longstMatchingNgbr[20];
 							memset(longstMatchingNgbr,'\0',20);
 							printNeighbourTable();
@@ -204,8 +278,14 @@ int packetForwardAlgorithm(char myTierAdd[], char desTierAdd[])
 								strcpy(longstMatchingNgbr,parentTierAdd);
 							}
 						
-							printf("\n checkIfDestUIDSubStringUID = FALSE \n");
-	                                                printf("\n Sending the packet to longest neighbour %s \n",longstMatchingNgbr);
+							if(enableLogScreen){
+								printf("\n checkIfDestUIDSubStringUID = FALSE \n");
+	                        	printf("\n Sending the packet to longest neighbour %s \n",longstMatchingNgbr);
+	                    	}
+	                        if(enableLogFiles){
+   								fprintf(fptr,"\n checkIfDestUIDSubStringUID = FALSE \n");
+   								fprintf(fptr,"\n Sending the packet to longest neighbour %s \n",longstMatchingNgbr);
+   							}
 	                        returnValue = setNextTierToSendPacket(longstMatchingNgbr);
 							
 						}
@@ -215,7 +295,10 @@ int packetForwardAlgorithm(char myTierAdd[], char desTierAdd[])
 			}
 		}		
 	}
-	printf("\n\n%s:Exit , returnValue = %d \n",__FUNCTION__,returnValue);
+	if(enableLogScreen)
+		printf("\n\n%s:Exit , returnValue = %d \n",__FUNCTION__,returnValue);
+	if(enableLogFiles)
+   		fprintf(fptr,"\n\n%s:Exit , returnValue = %d \n",__FUNCTION__,returnValue);
 	return returnValue;
 }
 
@@ -238,13 +321,19 @@ int setNextTierToSendPacket(char* nodeAddress)
 	
 	if (checkFWDSet == true)
 	{
-		printf("checkFWDSet == true , setting the fwdSet \n");
+		if(enableLogScreen)
+			printf("checkFWDSet == true , setting the fwdSet \n");
+		if(enableLogFiles)
+   			fprintf(fptr,"checkFWDSet == true , setting the fwdSet \n");
 		fwdSet = SUCCESS; //to-do need of this variable ?
 		returnValue = SUCCESS;
 	} 
 	else 
 	{
-		printf("ERROR: Failed to set to the parent Tier Address\n");
+		if(enableLogScreen)
+			printf("ERROR: Failed to set to the parent Tier Address\n");
+		if(enableLogFiles)
+   			fprintf(fptr,"ERROR: Failed to set to the parent Tier Address\n");
 		returnValue = ERROR;
 		fwdSet = ERROR; //to-do need of this variable ?
 	}
@@ -267,7 +356,10 @@ int setNextTierToSendPacket(char* nodeAddress)
 
 boolean checkIfDestUIDSubStringUID(char* destUID,char* myUID)
 {
-	printf("\n myUID = %s destUID=%s",myUID,destUID);
+	if(enableLogScreen)
+		printf("\n myUID = %s destUID=%s",myUID,destUID);
+	if(enableLogFiles)
+   		fprintf(fptr,"\n myUID = %s destUID=%s",myUID,destUID);
 
 	//3.1 //1
 
@@ -294,14 +386,24 @@ boolean checkIfDestUIDSubStringUID(char* destUID,char* myUID)
 		}
 		pos2++;
 		
-		printf("\n destVal =%d myVal=%d",destVal,myVal);
+		if(enableLogScreen)
+			printf("\n destVal =%d myVal=%d",destVal,myVal);
+		if(enableLogFiles)
+   			fprintf(fptr,"\n destVal =%d myVal=%d",destVal,myVal);
+
 		if(destVal != myVal){
-			printf("\n False");
+			if(enableLogScreen)
+				printf("\n False");
+			if(enableLogFiles)
+   				fprintf(fptr,"\n False");
 			return false;
 		}
 
 	}
-	printf("\n True");
+	if(enableLogScreen)
+		printf("\n True");
+	if(enableLogFiles)
+   		fprintf(fptr,"\n True");
 	return true;
 
 }
@@ -320,8 +422,11 @@ void formNextUIDtoTransferInCase3B(char* nextTierAddress ,char* currentTierAddre
 	int i = strlen(currentTierAddress)-1; 
 	int k = 0;
 	int savePos = 0;
-	
-	printf("\n formNextUIDtoTransferInCase3B : currentTierAddress = %s condition = %s \n",currentTierAddress,
+	if(enableLogScreen)
+		printf("\n formNextUIDtoTransferInCase3B : currentTierAddress = %s condition = %s \n",currentTierAddress,
+								(cond == true)?"true":"false");
+	if(enableLogFiles)
+   		fprintf(fptr,"\n formNextUIDtoTransferInCase3B : currentTierAddress = %s condition = %s \n",currentTierAddress,
 								(cond == true)?"true":"false");
 
 	//currentTierAddress = 1.1
@@ -392,7 +497,10 @@ void formNextUIDtoTransferInCase3B(char* nextTierAddress ,char* currentTierAddre
 		savePos++;
 	}
 	//nextTierAddress = 1.2
-	printf("\n%s : nextTierAddress = %s Length=%d\n",__FUNCTION__,nextTierAddress,(int)strlen(nextTierAddress));
+	if(enableLogScreen)
+		printf("\n%s : nextTierAddress = %s Length=%d\n",__FUNCTION__,nextTierAddress,(int)strlen(nextTierAddress));
+	if(enableLogFiles)
+   		fprintf(fptr,"\n%s : nextTierAddress = %s Length=%d\n",__FUNCTION__,nextTierAddress,(int)strlen(nextTierAddress));
 
 }
 
@@ -413,7 +521,11 @@ boolean compareUIDs(char* curUID,char* destUID) {
 	char curPart[20];
 	char destPart[20];
 	int k;
-	printf("\n%s : curUID =%s , destUID =%s",__FUNCTION__,curUID,destUID);
+	if(enableLogScreen)
+		printf("\n%s : curUID =%s , destUID =%s",__FUNCTION__,curUID,destUID);
+	if(enableLogFiles)
+   		fprintf(fptr,"\n%s : curUID =%s , destUID =%s",__FUNCTION__,curUID,destUID);
+
 	while( curUID[ic] != '\0' && destUID[id] != '\0' ){
 
 		k  =0;
@@ -432,14 +544,23 @@ boolean compareUIDs(char* curUID,char* destUID) {
 
 		int curPartVal = atoi(curPart);
 		int destPartVal = atoi(destPart);
-		printf("\n %s: comparing UIDS curPartVal=%d destPartVal=%d ",__FUNCTION__,curPartVal,destPartVal);
+		if(enableLogScreen)
+			printf("\n %s: comparing UIDS curPartVal=%d destPartVal=%d ",__FUNCTION__,curPartVal,destPartVal);
+		if(enableLogFiles)
+   			fprintf(fptr,"\n %s: comparing UIDS curPartVal=%d destPartVal=%d ",__FUNCTION__,curPartVal,destPartVal);
 
 		if(curPartVal < destPartVal){
-			printf("\n%s : curPartVal < destPartVal",__FUNCTION__);
+			if(enableLogScreen)
+				printf("\n%s : curPartVal < destPartVal",__FUNCTION__);
+			if(enableLogFiles)
+   				fprintf(fptr,"\n%s : curPartVal < destPartVal",__FUNCTION__);
 			return true;
 		}
 		else if(curPartVal > destPartVal){
-			printf("\n%s : curPartVal < destPartVal",__FUNCTION__);
+			if(enableLogScreen)
+				printf("\n%s : curPartVal < destPartVal",__FUNCTION__);
+			if(enableLogFiles)
+   				fprintf(fptr,"\n%s : curPartVal < destPartVal",__FUNCTION__);
 			return false;
 		}
 		else{
@@ -454,11 +575,16 @@ boolean compareUIDs(char* curUID,char* destUID) {
 	}
 
 	if(destUID[id] != '\0' ){
-		printf("%s : destUID is still left",__FUNCTION__);
+		if(enableLogScreen)
+			printf("%s : destUID is still left",__FUNCTION__);
+		if(enableLogFiles)
+   			fprintf(fptr,"%s : destUID is still left",__FUNCTION__);
 		return false;	
 	}
-	
-	printf("%s: Some error!! ",__FUNCTION__);
+	if(enableLogScreen)
+		printf("%s: Some error!! ",__FUNCTION__);
+	if(enableLogFiles)
+   		fprintf(fptr,"%s: Some error!! ",__FUNCTION__);
 	return true; //Should never come to this case as destID is always > curID length
 
 }
